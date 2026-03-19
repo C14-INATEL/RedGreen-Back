@@ -10,7 +10,7 @@ export enum UserType {
   USER = 'User',
 }
 
-@Entity({ name: 'user' })
+@Entity({ name: 'User' })
 export class User {
   @PrimaryGeneratedColumn('uuid')
   UserId: string;
