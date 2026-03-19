@@ -69,14 +69,6 @@ export class CreateUserDto {
   DailyLoginStreak?: number;
 
   @ApiProperty({
-    example: '25/03/2026',
-    description: 'User last login date',
-  })
-  @IsOptional()
-  @IsDateString()
-  LastLoginDate?: string;
-
-  @ApiProperty({
     example: true,
     description:
       'User account active status. If "active" is true the account is activated, else if "active" is false the account is deactivated',
