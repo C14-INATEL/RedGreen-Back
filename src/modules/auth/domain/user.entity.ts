@@ -1,16 +1,54 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
-@Entity({ name: 'users' })
+export enum UserType {
+  ADMIN = 'Admin',
+  USER = 'User',
+}
+
+@Entity({ name: 'User' })
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column({ unique: true })
-  email: string;
+  UserId: string;
 
   @Column()
-  passwordHash: string;
+  Name: string;
 
-  @Column({ default: 'player' })
-  role: string;
+  @Column()
+  BirthDate: Date;
+
+  @Column({ unique: true })
+  Nickname: string;
+
+  @Column({ unique: true })
+  Email: string;
+
+  @Column()
+  Password: string;
+
+  @Column({ default: 0 })
+  ChipBalance: number;
+
+  @Column({ default: 0 })
+  DailyLoginStreak: number;
+
+  @Column({ nullable: true })
+  LastLoginDate: Date;
+
+  @CreateDateColumn()
+  CreatedAt: Date;
+
+  @Column({ default: true })
+  Active: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: UserType,
+    default: UserType.USER,
+  })
+  UserType: UserType;
 }
