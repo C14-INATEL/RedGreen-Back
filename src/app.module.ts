@@ -38,7 +38,7 @@ import { AuthModule } from './modules/auth/auth.module';
           password,
           database,
           autoLoadEntities: true,
-          synchronize: false,
+          synchronize: true,
           logging: true,
         };
       },
