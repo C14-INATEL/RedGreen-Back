@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Min,
 } from 'class-validator';
 
 export class CreateGameDto {
@@ -25,6 +26,7 @@ export class CreateGameDto {
   Description: string;
 
   @IsNumber()
+  @Min(0)
   @ApiProperty({
     example: 100,
     description: 'The base reward value for the game',
