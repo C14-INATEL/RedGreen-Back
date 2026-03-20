@@ -1,6 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Check, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'Game' })
+@Check('CHK_BaseRewardValue_non_negative', '"BaseRewardValue" >= 0')
 export class Game {
   @PrimaryGeneratedColumn('uuid')
   GameId: number;
