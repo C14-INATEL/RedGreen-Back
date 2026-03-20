@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { GamesModule } from './modules/games/games.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { AuthModule } from './modules/auth/auth.module';
       }),
     }),
     AuthModule,
+    GamesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
