@@ -1,6 +1,6 @@
 # Red & Green Cassino - API Backend
 
-Responsável por gerenciar toda a inteligência e segurança do cassino, garantindo que a lógica dos jogos, a geração de números aleatórios (RNG) e as transações financeiras ocorram em um ambiente seguro e isolado.
+Responsável por gerenciar toda a inteligência e segurança do cassino, garantindo que a lógica dos jogos, a geração de números aleatórios (RNG) e as transações de fichas ocorram em um ambiente seguro e isolado.
 
 ---
 
