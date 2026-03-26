@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { SlotMachineModule } from './modules/slot-machine/slot-machine.module';
 
 @Module({
   imports: [
@@ -13,12 +14,12 @@ import { AuthModule } from './modules/auth/auth.module';
       imports: [ConfigModule],
       inject: [ConfigService],
 
-      useFactory: (config: ConfigService) => {
-        const host = config.get<string>('POSTGRES_HOST', 'localhost');
-        const port = parseInt(config.get<string>('POSTGRES_PORT', '5433'), 10);
-        const username = config.get<string>('POSTGRES_USER');
-        const password = config.get<string>('POSTGRES_PASSWORD');
-        const database = config.get<string>('POSTGRES_DB');
+      useFactory: (Config: ConfigService) => {
+        const host = Config.get<string>('POSTGRES_HOST', 'localhost');
+        const port = parseInt(Config.get<string>('POSTGRES_PORT', '5433'), 10);
+        const username = Config.get<string>('POSTGRES_USER');
+        const password = Config.get<string>('POSTGRES_PASSWORD');
+        const database = Config.get<string>('POSTGRES_DB');
 
         if (!username || !password || !database) {
           throw new Error(
@@ -52,6 +53,7 @@ import { AuthModule } from './modules/auth/auth.module';
       }),
     }),
     AuthModule,
+    SlotMachineModule,
   ],
   controllers: [AppController],
   providers: [AppService],
