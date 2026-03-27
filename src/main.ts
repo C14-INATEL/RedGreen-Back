@@ -20,9 +20,9 @@ async function bootstrap() {
   const port = configService.get<number>('PORT', 3000);
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Cassino Web API')
+    .setTitle('Cassino Red & Green API')
     .setDescription('API do backend do Cassino Web')
-    .setVersion('1.0')
+    .setVersion('1.0.1')
     .addBearerAuth(
       {
         type: 'http',
