@@ -18,8 +18,9 @@ export class CreateSlotMachineDto {
   Name: string;
 
   @ApiProperty({
-    example: 'A fun slot machine game',
-    description: 'Description of the slot machine',
+    example: 'A machine with high prizes and 3 rerolls',
+    description:
+      'Description of the theme or special features of the slot machine',
     required: false,
   })
   @IsOptional()
@@ -27,8 +28,8 @@ export class CreateSlotMachineDto {
   Description: string;
 
   @ApiProperty({
-    example: 10,
-    description: 'Minimum spin value',
+    example: 20,
+    description: 'Minimum value per spin',
     required: false,
   })
   @IsOptional()
@@ -38,7 +39,8 @@ export class CreateSlotMachineDto {
 
   @ApiProperty({
     example: 100,
-    description: 'Minimum chips required',
+    description:
+      'Minimum chips required for the user to have acess to this machine',
     required: false,
   })
   @IsOptional()
@@ -47,18 +49,28 @@ export class CreateSlotMachineDto {
   MinimumChipsRequired: number;
 
   @ApiProperty({
-    example: 0,
-    description: 'Maximum number of rerolls',
+    example: 10,
+    description: 'Minimum chips required to perform a reroll on this machine',
     required: false,
   })
   @IsOptional()
   @IsNumber()
   @Min(0)
+  MinimumRerollValue: number;
+
+  @ApiProperty({
+    example: 5,
+    description: 'Maximum rerolls on this machine',
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(3)
   MaxRerolls: number;
 
   @ApiProperty({
     example: true,
-    description: 'Whether the slot machine is active',
+    description: 'Define if the machine is active or inactive',
     required: false,
   })
   @IsOptional()
