@@ -12,61 +12,61 @@ export class SlotMachineService {
     private readonly SlotMachineRepo: Repository<SlotMachine>
   ) {}
 
-  async create(dto: CreateSlotMachineDto): Promise<SlotMachine> {
-    const SlotMachine = this.SlotMachineRepo.create(dto);
+  async Create(DTO: CreateSlotMachineDto): Promise<SlotMachine> {
+    const SlotMachine = this.SlotMachineRepo.create(DTO);
     return this.SlotMachineRepo.save(SlotMachine);
   }
 
-  async findAll(): Promise<SlotMachine[]> {
+  async FindAll(): Promise<SlotMachine[]> {
     return this.SlotMachineRepo.find();
   }
 
-  async findOne(id: number): Promise<SlotMachine> {
+  async FindOne(Id: number): Promise<SlotMachine> {
     const SlotMachine = await this.SlotMachineRepo.findOneBy({
-      SlotMachineId: id,
+      SlotMachineId: Id,
     });
     if (!SlotMachine) {
-      throw new NotFoundException(`SlotMachine with ID ${id} not found`);
+      throw new NotFoundException(`SlotMachine with ID ${Id} not found`);
     }
     return SlotMachine;
   }
 
-  async update(id: number, dto: UpdateSlotMachineDto): Promise<SlotMachine> {
-    const SlotMachine = await this.findOne(id);
+  async Update(Id: number, DTO: UpdateSlotMachineDto): Promise<SlotMachine> {
+    const SlotMachine = await this.FindOne(Id);
 
-    if (dto.Name !== undefined) {
-      SlotMachine.Name = dto.Name;
+    if (DTO.Name !== undefined) {
+      SlotMachine.Name = DTO.Name;
     }
-    if (dto.Description !== undefined) {
-      SlotMachine.Description = dto.Description;
+    if (DTO.Description !== undefined) {
+      SlotMachine.Description = DTO.Description;
     }
-    if (dto.MinimumSpinValue !== undefined) {
-      SlotMachine.MinimumSpinValue = dto.MinimumSpinValue;
+    if (DTO.MinimumSpinValue !== undefined) {
+      SlotMachine.MinimumSpinValue = DTO.MinimumSpinValue;
     }
-    if (dto.MinimumChipsRequired !== undefined) {
-      SlotMachine.MinimumChipsRequired = dto.MinimumChipsRequired;
+    if (DTO.MinimumChipsRequired !== undefined) {
+      SlotMachine.MinimumChipsRequired = DTO.MinimumChipsRequired;
     }
-    if (dto.MinimumRerollValue !== undefined) {
-      SlotMachine.MinimumRerollValue = dto.MinimumRerollValue;
+    if (DTO.MinimumRerollValue !== undefined) {
+      SlotMachine.MinimumRerollValue = DTO.MinimumRerollValue;
     }
-    if (dto.MaxRerolls !== undefined) {
-      SlotMachine.MaxRerolls = dto.MaxRerolls;
+    if (DTO.MaxRerolls !== undefined) {
+      SlotMachine.MaxRerolls = DTO.MaxRerolls;
     }
-    if (dto.Active !== undefined) {
-      SlotMachine.Active = dto.Active;
+    if (DTO.Active !== undefined) {
+      SlotMachine.Active = DTO.Active;
     }
 
     return this.SlotMachineRepo.save(SlotMachine);
   }
 
-  async deactivate(id: number): Promise<SlotMachine> {
-    const SlotMachine = await this.findOne(id);
-    SlotMachine.Active = false;
+  async Deactivate(Id: number): Promise<SlotMachine> {
+    const SlotMachine = await this.FindOne(Id);
+    SlotMachine.Active = !SlotMachine.Active;
     return this.SlotMachineRepo.save(SlotMachine);
   }
 
-  async remove(id: number): Promise<void> {
-    const SlotMachine = await this.findOne(id);
+  async Remove(Id: number): Promise<void> {
+    const SlotMachine = await this.FindOne(Id);
     await this.SlotMachineRepo.remove(SlotMachine);
   }
 }
