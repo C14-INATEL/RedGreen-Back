@@ -22,19 +22,25 @@ export class UserController {
 
   @Get('profile')
   @ApiOperation({ summary: "Get User's profile" })
-  async GetProfile(@CurrentUser() CurrentUser: { UserId: string }) {
+  async GetProfile(
+    @CurrentUser() CurrentUser: { UserId: string; UserType: string }
+  ) {
     return this.AuthService.GetProfile(CurrentUser.UserId);
   }
 
   @Get('chips')
   @ApiOperation({ summary: 'Get current User Chip Balance' })
-  async GetChipBalance(@CurrentUser() CurrentUser: { UserId: string }) {
+  async GetChipBalance(
+    @CurrentUser() CurrentUser: { UserId: string; UserType: string }
+  ) {
     return this.AuthService.GetChipBalance(CurrentUser.UserId);
   }
 
   @Post('daily-login')
   @ApiOperation({ summary: 'Process daily first-login logic and reward Chips' })
-  async DailyLogin(@CurrentUser() CurrentUser: { UserId: string }) {
+  async DailyLogin(
+    @CurrentUser() CurrentUser: { UserId: string; UserType: string }
+  ) {
     return this.AuthService.CheckDailyLogin(CurrentUser.UserId);
   }
 
@@ -42,7 +48,9 @@ export class UserController {
   @ApiOperation({
     summary: 'Delete current User account (set Active to false)',
   })
-  async DeleteAccount(@CurrentUser() CurrentUser: { UserId: string }) {
+  async DeleteAccount(
+    @CurrentUser() CurrentUser: { UserId: string; UserType: string }
+  ) {
     return this.AuthService.DeleteAccount(CurrentUser.UserId);
   }
 
