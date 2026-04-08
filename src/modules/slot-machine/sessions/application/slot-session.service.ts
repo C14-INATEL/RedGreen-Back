@@ -4,6 +4,10 @@ import { Repository } from 'typeorm';
 import { SlotSession, SlotSessionStatus } from '../domain/slot-session.entity';
 import { CreateSlotSessionDto } from '../domain/dto/create-slot-session.dto';
 import { UpdateSlotSessionDto } from '../domain/dto/update-slot-session.dto';
+import type {
+  CurrentSpinResultState,
+  RerollState,
+} from '../domain/types/slot-session.types';
 
 @Injectable()
 export class SlotSessionService {
@@ -12,22 +16,20 @@ export class SlotSessionService {
     private readonly SlotSessionRepo: Repository<SlotSession>
   ) {}
 
-  async create(dto: CreateSlotSessionDto): Promise<SlotSession> {
-    const now = new Date();
+  async create(DTO: CreateSlotSessionDto): Promise<SlotSession> {
+    const Now = new Date();
     const SlotSession = this.SlotSessionRepo.create({
-      ...dto,
-      Status: dto.Status || SlotSessionStatus.Active,
-      StartedAt: dto.StartedAt ? new Date(dto.StartedAt) : now,
-      LastInteractionAt: dto.LastInteractionAt
-        ? new Date(dto.LastInteractionAt)
-        : now,
-      CurrentRewardSnapshot: dto.CurrentRewardSnapshot ?? 0,
-      CurrentRerollsSpent: dto.CurrentRerollsSpent ?? {
-        Rerolls: {
-          Max: 0,
-          Used: 0,
-        },
-      },
+      UserId: DTO.UserId,
+      SlotMachineId: DTO.SlotMachineId,
+      Status: DTO.Status || SlotSessionStatus.Active,
+      StartedAt: DTO.StartedAt ? new Date(DTO.StartedAt) : Now,
+      LastInteractionAt: DTO.LastInteractionAt
+        ? new Date(DTO.LastInteractionAt)
+        : Now,
+      EndedAt: DTO.EndedAt ? new Date(DTO.EndedAt) : null,
+      CurrentRewardSnapshot: DTO.CurrentRewardSnapshot ?? 0,
+      CurrentSpinResult: DTO.CurrentSpinResult as CurrentSpinResultState,
+      CurrentRerollsSpent: DTO.CurrentRerollsSpent as RerollState,
     });
     return this.SlotSessionRepo.save(SlotSession);
   }
@@ -36,52 +38,53 @@ export class SlotSessionService {
     return this.SlotSessionRepo.find();
   }
 
-  async findOne(id: number): Promise<SlotSession> {
+  async findOne(Id: number): Promise<SlotSession> {
     const SlotSession = await this.SlotSessionRepo.findOneBy({
-      SlotSessionId: id,
+      SlotSessionId: Id,
     });
     if (!SlotSession) {
-      throw new NotFoundException(`SlotSession with ID ${id} not found`);
+      throw new NotFoundException(`SlotSession with Id ${Id} not found`);
     }
     return SlotSession;
   }
 
-  async update(id: number, dto: UpdateSlotSessionDto): Promise<SlotSession> {
-    const SlotSession = await this.findOne(id);
+  async update(Id: number, DTO: UpdateSlotSessionDto): Promise<SlotSession> {
+    const SlotSession = await this.findOne(Id);
 
-    if (dto.UserId !== undefined) {
-      SlotSession.UserId = dto.UserId;
+    if (DTO.UserId !== undefined) {
+      SlotSession.UserId = DTO.UserId;
     }
-    if (dto.SlotMachineId !== undefined) {
-      SlotSession.SlotMachineId = dto.SlotMachineId;
+    if (DTO.SlotMachineId !== undefined) {
+      SlotSession.SlotMachineId = DTO.SlotMachineId;
     }
-    if (dto.Status !== undefined) {
-      SlotSession.Status = dto.Status;
+    if (DTO.Status !== undefined) {
+      SlotSession.Status = DTO.Status;
     }
-    if (dto.StartedAt !== undefined) {
-      SlotSession.StartedAt = new Date(dto.StartedAt);
+    if (DTO.StartedAt !== undefined) {
+      SlotSession.StartedAt = new Date(DTO.StartedAt);
     }
-    if (dto.LastInteractionAt !== undefined) {
-      SlotSession.LastInteractionAt = new Date(dto.LastInteractionAt);
+    if (DTO.LastInteractionAt !== undefined) {
+      SlotSession.LastInteractionAt = new Date(DTO.LastInteractionAt);
     }
-    if (dto.EndedAt !== undefined) {
-      SlotSession.EndedAt = dto.EndedAt ? new Date(dto.EndedAt) : null;
+    if (DTO.EndedAt !== undefined) {
+      SlotSession.EndedAt = DTO.EndedAt ? new Date(DTO.EndedAt) : null;
     }
-    if (dto.CurrentRewardSnapshot !== undefined) {
-      SlotSession.CurrentRewardSnapshot = dto.CurrentRewardSnapshot;
+    if (DTO.CurrentRewardSnapshot !== undefined) {
+      SlotSession.CurrentRewardSnapshot = DTO.CurrentRewardSnapshot;
     }
-    if (dto.CurrentSpinResult !== undefined) {
-      SlotSession.CurrentSpinResult = dto.CurrentSpinResult;
+    if (DTO.CurrentSpinResult !== undefined) {
+      SlotSession.CurrentSpinResult =
+        DTO.CurrentSpinResult as CurrentSpinResultState;
     }
-    if (dto.CurrentRerollsSpent !== undefined) {
-      SlotSession.CurrentRerollsSpent = dto.CurrentRerollsSpent;
+    if (DTO.CurrentRerollsSpent !== undefined) {
+      SlotSession.CurrentRerollsSpent = DTO.CurrentRerollsSpent as RerollState;
     }
 
     return this.SlotSessionRepo.save(SlotSession);
   }
 
-  async remove(id: number): Promise<void> {
-    const SlotSession = await this.findOne(id);
+  async remove(Id: number): Promise<void> {
+    const SlotSession = await this.findOne(Id);
     await this.SlotSessionRepo.remove(SlotSession);
   }
 }
