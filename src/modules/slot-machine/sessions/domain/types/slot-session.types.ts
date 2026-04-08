@@ -1,10 +1,12 @@
+import { SlotSymbol } from '../enums/slot-symbol.enum';
+
 export interface SpinReelResult {
   ReelIndex: number;
-  SymbolId: string;
+  SymbolId: SlotSymbol;
 }
 
 export interface CurrentSpinResultState {
-  reels: SpinReelResult[];
+  Reels: SpinReelResult[];
 }
 
 export interface RerollState {

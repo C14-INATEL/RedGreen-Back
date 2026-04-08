@@ -6,12 +6,12 @@ import {
   IsOptional,
   IsDateString,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { SlotSessionStatus } from '../slot-session.entity';
-import type {
-  CurrentSpinResultState,
-  RerollState,
-} from '../types/slot-session.types';
+import { CurrentSpinResultStateDto } from './current-spin-result-state.dto';
+import { RerollStateDto } from './reroll-state.dto';
 
 export class CreateSlotSessionDto {
   @ApiProperty({
@@ -81,28 +81,12 @@ export class CreateSlotSessionDto {
     },
     description:
       'Current spin result including the current symbols shown in each reel',
-    type: 'object',
-    properties: {
-      reels: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            ReelIndex: {
-              type: 'number',
-              example: 0,
-            },
-            SymbolId: {
-              type: 'string',
-              example: 'Pig',
-            },
-          },
-        },
-      },
-    },
+    type: CurrentSpinResultStateDto,
   })
   @IsObject()
-  CurrentSpinResult: CurrentSpinResultState;
+  @ValidateNested()
+  @Type(() => CurrentSpinResultStateDto)
+  CurrentSpinResult: CurrentSpinResultStateDto;
 
   @ApiPropertyOptional({
     example: {
@@ -112,24 +96,11 @@ export class CreateSlotSessionDto {
       },
     },
     description: 'Current reroll usage state of the session',
-    type: 'object',
-    properties: {
-      Rerolls: {
-        type: 'object',
-        properties: {
-          Max: {
-            type: 'number',
-            example: 4,
-          },
-          Used: {
-            type: 'number',
-            example: 1,
-          },
-        },
-      },
-    },
+    type: RerollStateDto,
   })
   @IsOptional()
   @IsObject()
-  CurrentRerollsSpent: RerollState;
+  @ValidateNested()
+  @Type(() => RerollStateDto)
+  CurrentRerollsSpent: RerollStateDto;
 }
