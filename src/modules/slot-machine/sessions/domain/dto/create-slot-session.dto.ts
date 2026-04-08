@@ -72,7 +72,7 @@ export class CreateSlotSessionDto {
 
   @ApiProperty({
     example: {
-      reels: [
+      Reels: [
         { ReelIndex: 0, SymbolId: 'Pig' },
         { ReelIndex: 1, SymbolId: 'Rat' },
         { ReelIndex: 2, SymbolId: 'Orange' },
