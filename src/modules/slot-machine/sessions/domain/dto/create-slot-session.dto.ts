@@ -73,10 +73,10 @@ export class CreateSlotSessionDto {
   @ApiProperty({
     example: {
       reels: [
-        { ReelIndex: 0, SymbolId: 'pig' },
-        { ReelIndex: 1, SymbolId: 'rat' },
-        { ReelIndex: 2, SymbolId: 'orange' },
-        { ReelIndex: 3, SymbolId: 'cheese' },
+        { ReelIndex: 0, SymbolId: 'Pig' },
+        { ReelIndex: 1, SymbolId: 'Rat' },
+        { ReelIndex: 2, SymbolId: 'Orange' },
+        { ReelIndex: 3, SymbolId: 'Cheese' },
       ],
     },
     description:
@@ -94,7 +94,7 @@ export class CreateSlotSessionDto {
             },
             SymbolId: {
               type: 'string',
-              example: 'pig',
+              example: 'Pig',
             },
           },
         },
