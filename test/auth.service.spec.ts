@@ -60,6 +60,9 @@ describe('AuthService', () => {
 
     const Result = await service.GetProfile(ValidUser.UserId);
 
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: ValidUser.UserId },
+    });
     expect(Result).toEqual(
       expect.objectContaining({
         UserId: ValidUser.UserId,
@@ -75,12 +78,14 @@ describe('AuthService', () => {
   it('should throw BadRequestException when user does not exist', async () => {
     MockUserRepo.findOne.mockResolvedValue(null);
 
-    await expect(service.GetProfile('MissingUser')).rejects.toThrow(
-      BadRequestException
-    );
-    await expect(service.GetProfile('MissingUser')).rejects.toThrow(
-      'User not found'
-    );
+    const ProfilePromise = service.GetProfile('MissingUser');
+
+    await expect(ProfilePromise).rejects.toThrow(BadRequestException);
+    await expect(ProfilePromise).rejects.toThrow('User not found');
+    expect(MockUserRepo.findOne).toHaveBeenCalledTimes(1);
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: 'MissingUser' },
+    });
   });
 
   it('should update allowed user fields correctly', async () => {
@@ -100,6 +105,9 @@ describe('AuthService', () => {
 
     const Result = await service.UpdateProfile(ExistingUser.UserId, UpdateDto);
 
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: ExistingUser.UserId },
+    });
     expect(Result).toEqual(
       expect.objectContaining({
         UserId: ExistingUser.UserId,
@@ -108,6 +116,73 @@ describe('AuthService', () => {
       })
     );
     expect(Result).not.toHaveProperty('Password');
+  });
+
+  it('should ignore sensitive fields when updating profile', async () => {
+    const ExistingUser = { ...ValidUser };
+
+    const UpdateDto: {
+      Name: string;
+      BirthDate: string;
+      ChipBalance: number;
+      UserType: UserType;
+    } = {
+      Name: 'Jane Smith',
+      BirthDate: '1991-01-15',
+      ChipBalance: 9999,
+      UserType: UserType.ADMIN,
+    };
+
+    const UpdatedUser = {
+      ...ExistingUser,
+      Name: UpdateDto.Name,
+      BirthDate: new Date(UpdateDto.BirthDate),
+    };
+
+    MockUserRepo.findOne.mockResolvedValue(ExistingUser);
+    MockUserRepo.save.mockResolvedValue(UpdatedUser);
+
+    const Result = await service.UpdateProfile(ExistingUser.UserId, UpdateDto);
+
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: ExistingUser.UserId },
+    });
+    expect(MockUserRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        UserId: ExistingUser.UserId,
+        Name: UpdateDto.Name,
+        BirthDate: new Date(UpdateDto.BirthDate),
+        ChipBalance: ExistingUser.ChipBalance,
+        UserType: ExistingUser.UserType,
+        Password: ExistingUser.Password,
+      })
+    );
+    expect(Result).toEqual(
+      expect.objectContaining({
+        UserId: ExistingUser.UserId,
+        Name: UpdateDto.Name,
+        BirthDate: new Date(UpdateDto.BirthDate),
+      })
+    );
+    expect(Result).not.toHaveProperty('Password');
+  });
+
+  it('should throw BadRequestException when updating profile for missing user', async () => {
+    const UpdateDto = {
+      Name: 'Jane Smith',
+      BirthDate: '1991-01-15',
+    };
+
+    MockUserRepo.findOne.mockResolvedValue(null);
+
+    const UpdatePromise = service.UpdateProfile('MissingUser', UpdateDto);
+
+    await expect(UpdatePromise).rejects.toThrow(BadRequestException);
+    await expect(UpdatePromise).rejects.toThrow('User not found');
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: 'MissingUser' },
+    });
+    expect(MockUserRepo.save).not.toHaveBeenCalled();
   });
 
   it('should deactivate the user account', async () => {
@@ -119,6 +194,9 @@ describe('AuthService', () => {
 
     const Result = await service.DeleteAccount(ExistingUser.UserId);
 
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: ExistingUser.UserId },
+    });
     expect(MockUserRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({
         UserId: ExistingUser.UserId,
@@ -126,5 +204,18 @@ describe('AuthService', () => {
       })
     );
     expect(Result).toEqual({ message: 'Account deleted successfully' });
+  });
+
+  it('should throw BadRequestException when deleting missing user account', async () => {
+    MockUserRepo.findOne.mockResolvedValue(null);
+
+    const DeletePromise = service.DeleteAccount('MissingUser');
+
+    await expect(DeletePromise).rejects.toThrow(BadRequestException);
+    await expect(DeletePromise).rejects.toThrow('User not found');
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: 'MissingUser' },
+    });
+    expect(MockUserRepo.save).not.toHaveBeenCalled();
   });
 });
