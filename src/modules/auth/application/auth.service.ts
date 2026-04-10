@@ -91,6 +91,21 @@ export class AuthService {
     return { ChipBalance: User.ChipBalance };
   }
 
+  async UpdateChipBalance(UserId: string, Amount: number) {
+    const User = await this.UserRepo.findOne({ where: { UserId } });
+    if (!User) {
+      throw new BadRequestException('User not found');
+    }
+
+    User.ChipBalance += Amount;
+    if (User.ChipBalance < 0) {
+      throw new BadRequestException('Insufficient chips');
+    }
+
+    await this.UserRepo.save(User);
+    return { ChipBalance: User.ChipBalance };
+  }
+
   async IsEmailTaken(Email: string) {
     const ExistingUser = await this.UserRepo.findOne({ where: { Email } });
     return { Email, taken: !!ExistingUser };
