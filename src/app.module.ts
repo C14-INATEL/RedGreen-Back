@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { SlotMachineModule } from './modules/slot-machine/slot-machine.module';
+import { SlotSessionModule } from './modules/slot-machine/sessions/slot-session.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { SlotMachineModule } from './modules/slot-machine/slot-machine.module';
     }),
     AuthModule,
     SlotMachineModule,
+    SlotSessionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
