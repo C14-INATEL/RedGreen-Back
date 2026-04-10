@@ -87,7 +87,7 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
+    "rootDir": "test",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
@@ -96,6 +96,12 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
+    "moduleNameMapper": {
+      "^@core/(.*)$": "<rootDir>/../src/core/$1",
+      "^@modules/(.*)$": "<rootDir>/../src/modules/$1",
+      "^@config/(.*)$": "<rootDir>/../src/config/$1",
+      "^@/(.*)$": "<rootDir>/../src/$1"
+    },
     "testEnvironment": "node"
   }
 }
