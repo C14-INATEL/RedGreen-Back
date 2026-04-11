@@ -5,6 +5,5 @@ export enum SlotSymbol {
   Rat = 'Rat',
   Cheese = 'Cheese',
   TwoX = 'TwoX',
-  Egg = 'Egg',
   Pig = 'Pig',
 }
