@@ -185,6 +185,86 @@ describe('AuthService', () => {
     expect(MockUserRepo.save).not.toHaveBeenCalled();
   });
 
+  it('should keep non-updated fields unchanged when updating profile', async () => {
+    const ExistingUser = { ...ValidUser };
+    const UpdateDto = {
+      Name: 'Updated Name',
+    };
+    const UpdatedUser = {
+      ...ExistingUser,
+      Name: UpdateDto.Name,
+    };
+
+    MockUserRepo.findOne.mockResolvedValue(ExistingUser);
+    MockUserRepo.save.mockResolvedValue(UpdatedUser);
+
+    const Result = await service.UpdateProfile(ExistingUser.UserId, UpdateDto);
+
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: ExistingUser.UserId },
+    });
+    expect(MockUserRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        UserId: ExistingUser.UserId,
+        Name: UpdateDto.Name,
+        Email: ExistingUser.Email,
+        Nickname: ExistingUser.Nickname,
+        ChipBalance: ExistingUser.ChipBalance,
+        DailyLoginStreak: ExistingUser.DailyLoginStreak,
+        Active: ExistingUser.Active,
+        UserType: ExistingUser.UserType,
+        Password: ExistingUser.Password,
+      })
+    );
+    expect(Result).toEqual(
+      expect.objectContaining({
+        UserId: ExistingUser.UserId,
+        Name: UpdateDto.Name,
+        Email: ExistingUser.Email,
+        Nickname: ExistingUser.Nickname,
+        ChipBalance: ExistingUser.ChipBalance,
+        DailyLoginStreak: ExistingUser.DailyLoginStreak,
+        Active: ExistingUser.Active,
+        UserType: ExistingUser.UserType,
+      })
+    );
+    expect(Result).not.toHaveProperty('Password');
+  });
+
+  it('should not expose Password in UpdateProfile response', async () => {
+    const ExistingUser = { ...ValidUser };
+    const UpdateDto = {
+      Name: 'Updated Name',
+    };
+    const UpdatedUserWithPassword = {
+      ...ExistingUser,
+      Name: UpdateDto.Name,
+      Password: 'hashed-password',
+    };
+
+    MockUserRepo.findOne.mockResolvedValue(ExistingUser);
+    MockUserRepo.save.mockResolvedValue(UpdatedUserWithPassword);
+
+    const Result = await service.UpdateProfile(ExistingUser.UserId, UpdateDto);
+
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: ExistingUser.UserId },
+    });
+    expect(Result).toEqual(
+      expect.objectContaining({
+        UserId: ExistingUser.UserId,
+        Name: UpdateDto.Name,
+        Email: ExistingUser.Email,
+        Nickname: ExistingUser.Nickname,
+        ChipBalance: ExistingUser.ChipBalance,
+        DailyLoginStreak: ExistingUser.DailyLoginStreak,
+        Active: ExistingUser.Active,
+        UserType: ExistingUser.UserType,
+      })
+    );
+    expect(Result).not.toHaveProperty('Password');
+  });
+
   it('should deactivate the user account', async () => {
     const ExistingUser = { ...ValidUser, Active: true };
     const DeactivatedUser = { ...ExistingUser, Active: false };
