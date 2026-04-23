@@ -5,6 +5,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthService } from '../src/modules/auth/application/auth.service';
 import { User, UserType } from '../src/modules/auth/domain/user.entity';
 
+jest.mock('bcrypt');
+import * as bcrypt from 'bcrypt';
+
 describe('AuthService', () => {
   let service: AuthService;
   let MockUserRepo: {
@@ -231,35 +234,26 @@ describe('AuthService', () => {
     expect(Result).not.toHaveProperty('Password');
   });
 
-  it('should not expose Password in UpdateProfile response', async () => {
+  it('should hash Password when updating profile with new Password', async () => {
     const ExistingUser = { ...ValidUser };
     const UpdateDto = {
-      Name: 'Updated Name',
+      Password: 'plaintext-password',
     };
-    const UpdatedUserWithPassword = {
+    const UpdatedUser = {
       ...ExistingUser,
-      Name: UpdateDto.Name,
-      Password: 'hashed-password',
+      Password: 'new-hashed-password',
     };
 
+    (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed-password');
     MockUserRepo.findOne.mockResolvedValue(ExistingUser);
-    MockUserRepo.save.mockResolvedValue(UpdatedUserWithPassword);
+    MockUserRepo.save.mockResolvedValue(UpdatedUser);
 
     const Result = await service.UpdateProfile(ExistingUser.UserId, UpdateDto);
 
-    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
-      where: { UserId: ExistingUser.UserId },
-    });
-    expect(Result).toEqual(
+    expect(bcrypt.hash).toHaveBeenCalledWith('plaintext-password', 10);
+    expect(MockUserRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({
-        UserId: ExistingUser.UserId,
-        Name: UpdateDto.Name,
-        Email: ExistingUser.Email,
-        Nickname: ExistingUser.Nickname,
-        ChipBalance: ExistingUser.ChipBalance,
-        DailyLoginStreak: ExistingUser.DailyLoginStreak,
-        Active: ExistingUser.Active,
-        UserType: ExistingUser.UserType,
+        Password: 'new-hashed-password',
       })
     );
     expect(Result).not.toHaveProperty('Password');
