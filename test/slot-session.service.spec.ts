@@ -12,6 +12,7 @@ import { AuthService } from '../src/modules/auth/application/auth.service';
 import { SlotMachineService } from '../src/modules/slot-machine/application/slot-machine.service';
 import { SlotMachine } from '../src/modules/slot-machine/domain/slot-machine.entity';
 import { CreateSlotSessionDto } from '../src/modules/slot-machine/sessions/domain/dto/create-slot-session.dto';
+import { BadRequestException } from '@nestjs/common';
 
 type SlotSessionRepoMock = {
   create: jest.MockedFunction<(session: Partial<SlotSession>) => SlotSession>;
@@ -38,6 +39,48 @@ type SlotMachineServiceMock = {
 type SlotSessionServicePrivate = {
   calculateReward(reels: SpinReelResult[]): number;
   generateRandomReels(): SpinReelResult[];
+};
+
+type CashOutTransactionalRepoMock = {
+  findOne: jest.MockedFunction<
+    (Criteria: object) => Promise<SlotSession | null>
+  >;
+  save: jest.MockedFunction<(Session: SlotSession) => Promise<SlotSession>>;
+};
+
+type QueryRunnerMock = {
+  connect: jest.MockedFunction<() => Promise<void>>;
+  startTransaction: jest.MockedFunction<() => Promise<void>>;
+  commitTransaction: jest.MockedFunction<() => Promise<void>>;
+  rollbackTransaction: jest.MockedFunction<() => Promise<void>>;
+  release: jest.MockedFunction<() => Promise<void>>;
+  manager: {
+    getRepository: jest.MockedFunction<() => CashOutTransactionalRepoMock>;
+  };
+};
+
+type DataSourceMock = {
+  createQueryRunner: jest.MockedFunction<() => QueryRunnerMock>;
+};
+
+const MockCashOutRepo: CashOutTransactionalRepoMock = {
+  findOne: jest.fn(),
+  save: jest.fn(),
+};
+
+const MockQueryRunner: QueryRunnerMock = {
+  connect: jest.fn(),
+  startTransaction: jest.fn(),
+  commitTransaction: jest.fn(),
+  rollbackTransaction: jest.fn(),
+  release: jest.fn(),
+  manager: {
+    getRepository: jest.fn().mockReturnValue(MockCashOutRepo),
+  },
+};
+
+const MockDataSource: DataSourceMock = {
+  createQueryRunner: jest.fn().mockReturnValue(MockQueryRunner),
 };
 
 const callCalculateReward = (
@@ -96,7 +139,7 @@ describe('SlotSessionService', () => {
         },
         {
           provide: DataSource,
-          useValue: {} as DataSource,
+          useValue: MockDataSource as unknown as DataSource,
         },
       ],
     }).compile();
@@ -430,6 +473,89 @@ describe('SlotSessionService', () => {
 
         expect(error.message).toBe('Session is not active');
       }
+    });
+  });
+
+  describe('cashOut', () => {
+    const SlotMachineId = 1;
+    const SessionId = 10;
+    const UserId = 'user1';
+
+    const BuildActiveSession = (
+      Overrides: Partial<SlotSession> = {}
+    ): SlotSession =>
+      ({
+        SlotSessionId: SessionId,
+        SlotMachineId: SlotMachineId,
+        UserId: UserId,
+        Status: SlotSessionStatus.Active,
+        CurrentRewardSnapshot: 42,
+        StartedAt: new Date(),
+        LastInteractionAt: new Date(),
+        EndedAt: null,
+        CurrentSpinResult: { Reels: [] },
+        CurrentRerollsSpent: { Rerolls: { Max: 5, Used: 0 } },
+        DeletedAt: null,
+        ...Overrides,
+      }) as unknown as SlotSession;
+
+    it('should credit reward, end session, and commit transaction', async () => {
+      const ActiveSession = BuildActiveSession({ CurrentRewardSnapshot: 42 });
+      MockCashOutRepo.findOne.mockResolvedValue(ActiveSession);
+      MockCashOutRepo.save.mockImplementation((Session) =>
+        Promise.resolve(Session)
+      );
+      authService.UpdateChipBalance.mockResolvedValue(undefined);
+      authService.GetChipBalance.mockResolvedValue({ ChipBalance: 142 });
+
+      const Result = await service.cashOut(SlotMachineId, SessionId, UserId);
+
+      expect(authService.UpdateChipBalance).toHaveBeenCalledWith(UserId, 42);
+
+      const savedSession = MockCashOutRepo.save.mock.calls[0][0];
+      expect(savedSession.SlotSessionId).toBe(SessionId);
+      expect(savedSession.Status).toBe(SlotSessionStatus.Ended);
+      expect(savedSession.EndedAt).toBeInstanceOf(Date);
+      expect(MockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
+      expect(MockQueryRunner.rollbackTransaction).not.toHaveBeenCalled();
+      expect(MockQueryRunner.release).toHaveBeenCalledTimes(1);
+      expect(Result).toEqual({
+        message: 'Cash out successful',
+        finalBalance: 142,
+      });
+    });
+
+    it('should rollback transaction when session is not active', async () => {
+      const EndedSession = BuildActiveSession({
+        Status: SlotSessionStatus.Ended,
+      });
+      MockCashOutRepo.findOne.mockResolvedValue(EndedSession);
+
+      await expect(
+        service.cashOut(SlotMachineId, SessionId, UserId)
+      ).rejects.toThrow(BadRequestException);
+
+      expect(authService.UpdateChipBalance).not.toHaveBeenCalled();
+      expect(MockCashOutRepo.save).not.toHaveBeenCalled();
+      expect(MockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(MockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
+      expect(MockQueryRunner.release).toHaveBeenCalledTimes(1);
+    });
+
+    it('should rollback transaction when crediting chips fails', async () => {
+      const ActiveSession = BuildActiveSession({ CurrentRewardSnapshot: 42 });
+      const CreditError = new Error('Chip service unavailable');
+      MockCashOutRepo.findOne.mockResolvedValue(ActiveSession);
+      authService.UpdateChipBalance.mockRejectedValue(CreditError);
+
+      await expect(
+        service.cashOut(SlotMachineId, SessionId, UserId)
+      ).rejects.toThrow(CreditError);
+
+      expect(MockCashOutRepo.save).not.toHaveBeenCalled();
+      expect(MockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(MockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
+      expect(MockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
   });
 });
