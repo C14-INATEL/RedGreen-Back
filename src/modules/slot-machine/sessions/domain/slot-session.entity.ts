@@ -5,7 +5,6 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { SlotMachine } from '../../domain/slot-machine.entity';
 import { User } from '../../../auth/domain/user.entity';
 import type {
   CurrentSpinResultState,
@@ -33,10 +32,6 @@ export class SlotSession {
 
   @Column({ type: 'int' })
   SlotMachineId!: number;
-
-  @ManyToOne(() => SlotMachine, { nullable: false, onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'SlotMachineId' })
-  SlotMachine!: SlotMachine;
 
   @Column({ type: 'enum', enum: SlotSessionStatus })
   Status!: SlotSessionStatus;
