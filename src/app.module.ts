@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { SlotMachineModule } from './modules/slot-machine/slot-machine.module';
 import { SlotSessionModule } from './modules/slot-machine/sessions/slot-session.module';
+import { GambitModule } from './modules/gambit/gambit.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { SlotSessionModule } from './modules/slot-machine/sessions/slot-session.
     AuthModule,
     SlotMachineModule,
     SlotSessionModule,
+    GambitModule,
   ],
   controllers: [AppController],
   providers: [AppService],
