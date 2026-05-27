@@ -83,70 +83,70 @@ const MockDataSource: DataSourceMock = {
   createQueryRunner: jest.fn().mockReturnValue(MockQueryRunner),
 };
 
-const callCalculateReward = (
-  service: SlotSessionService,
-  reels: SpinReelResult[]
+const CallCalculateReward = (
+  Service: SlotSessionService,
+  Reels: SpinReelResult[]
 ): number => {
-  return (service as unknown as SlotSessionServicePrivate).calculateReward(
-    reels
+  return (Service as unknown as SlotSessionServicePrivate).calculateReward(
+    Reels
   );
 };
 
-const callGenerateRandomReels = (
-  service: SlotSessionService
+const CallGenerateRandomReels = (
+  Service: SlotSessionService
 ): SpinReelResult[] => {
   return (
-    service as unknown as SlotSessionServicePrivate
+    Service as unknown as SlotSessionServicePrivate
   ).generateRandomReels();
 };
 
 describe('SlotSessionService', () => {
-  let service: SlotSessionService;
-  let slotSessionRepo: SlotSessionRepoMock;
-  let authService: AuthServiceMock;
+  let Service: SlotSessionService;
+  let SlotSessionRepo: SlotSessionRepoMock;
+  let AuthServiceMockInstance: AuthServiceMock;
 
-  const mockSlotSessionRepo: SlotSessionRepoMock = {
+  const MockSlotSessionRepo: SlotSessionRepoMock = {
     create: jest.fn(),
     save: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
   };
 
-  const mockAuthService: AuthServiceMock = {
+  const MockAuthService: AuthServiceMock = {
     GetChipBalance: jest.fn(),
     UpdateChipBalance: jest.fn(),
   };
 
-  const mockSlotMachineService: SlotMachineServiceMock = {
+  const MockSlotMachineService: SlotMachineServiceMock = {
     FindOne: jest.fn(),
   };
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const Module: TestingModule = await Test.createTestingModule({
       providers: [
         SlotSessionService,
         {
           provide: getRepositoryToken(SlotSession),
-          useValue: mockSlotSessionRepo as unknown as Repository<SlotSession>,
-        },
-        {
-          provide: AuthService,
-          useValue: mockAuthService as unknown as AuthService,
-        },
-        {
-          provide: SlotMachineService,
-          useValue: mockSlotMachineService as unknown as SlotMachineService,
+          useValue: MockSlotSessionRepo as unknown as Repository<SlotSession>,
         },
         {
           provide: DataSource,
           useValue: MockDataSource as unknown as DataSource,
         },
+        {
+          provide: AuthService,
+          useValue: MockAuthService as unknown as AuthService,
+        },
+        {
+          provide: SlotMachineService,
+          useValue: MockSlotMachineService as unknown as SlotMachineService,
+        },
       ],
     }).compile();
 
-    service = module.get<SlotSessionService>(SlotSessionService);
-    slotSessionRepo = mockSlotSessionRepo;
-    authService = mockAuthService;
+    Service = Module.get<SlotSessionService>(SlotSessionService);
+    SlotSessionRepo = MockSlotSessionRepo;
+    AuthServiceMockInstance = MockAuthService;
   });
 
   afterEach(() => {
@@ -155,148 +155,360 @@ describe('SlotSessionService', () => {
 
   describe('calculateReward', () => {
     it('should return 0 when rat is present without cheese', () => {
-      const reels: SpinReelResult[] = [
+      const Reels: SpinReelResult[] = [
         { ReelIndex: 0, SymbolId: SlotSymbol.Rat },
         { ReelIndex: 1, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 2, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 3, SymbolId: SlotSymbol.Orange },
       ];
 
-      const result = callCalculateReward(service, reels);
-      expect(result).toBe(0);
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(0);
     });
 
-    it('should return 3 for 3 oranges', () => {
-      const reels: SpinReelResult[] = [
+    it('should return 5 for 3 oranges', () => {
+      const Reels: SpinReelResult[] = [
         { ReelIndex: 0, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 1, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 2, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 3, SymbolId: SlotSymbol.Cheese },
       ];
 
-      const result = callCalculateReward(service, reels);
-      expect(result).toBe(3);
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(5);
     });
 
-    it('should return 5 for 4 oranges', () => {
-      const reels: SpinReelResult[] = [
+    it('should return 8 for 4 oranges', () => {
+      const Reels: SpinReelResult[] = [
         { ReelIndex: 0, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 1, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 2, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 3, SymbolId: SlotSymbol.Orange },
       ];
 
-      const result = callCalculateReward(service, reels);
-      expect(result).toBe(5);
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(8);
     });
 
-    it('should return 9 for 3 oranges (stack)', () => {
-      const reels: SpinReelResult[] = [
+    it('should return 10 for 3 oranges', () => {
+      const Reels: SpinReelResult[] = [
         { ReelIndex: 0, SymbolId: SlotSymbol.Oranges },
         { ReelIndex: 1, SymbolId: SlotSymbol.Oranges },
         { ReelIndex: 2, SymbolId: SlotSymbol.Oranges },
         { ReelIndex: 3, SymbolId: SlotSymbol.Cheese },
       ];
 
-      const result = callCalculateReward(service, reels);
-      expect(result).toBe(9);
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(10);
     });
 
-    it('should return 15 for 4 oranges (stack)', () => {
-      const reels: SpinReelResult[] = [
+    it('should return 15 for 4 oranges', () => {
+      const Reels: SpinReelResult[] = [
         { ReelIndex: 0, SymbolId: SlotSymbol.Oranges },
         { ReelIndex: 1, SymbolId: SlotSymbol.Oranges },
         { ReelIndex: 2, SymbolId: SlotSymbol.Oranges },
         { ReelIndex: 3, SymbolId: SlotSymbol.Oranges },
       ];
 
-      const result = callCalculateReward(service, reels);
-      expect(result).toBe(15);
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(15);
     });
 
-    it('should return 10 for 1 pig', () => {
-      const reels: SpinReelResult[] = [
+    it('should return 20 for 1 pig', () => {
+      const Reels: SpinReelResult[] = [
         { ReelIndex: 0, SymbolId: SlotSymbol.Pig },
         { ReelIndex: 1, SymbolId: SlotSymbol.Cheese },
         { ReelIndex: 2, SymbolId: SlotSymbol.Cheese },
         { ReelIndex: 3, SymbolId: SlotSymbol.Cheese },
       ];
 
-      const result = callCalculateReward(service, reels);
-      expect(result).toBe(10);
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(20);
     });
 
     it('should return 100 for 4 watermelons', () => {
-      const reels: SpinReelResult[] = [
+      const Reels: SpinReelResult[] = [
         { ReelIndex: 0, SymbolId: SlotSymbol.Watermelon },
         { ReelIndex: 1, SymbolId: SlotSymbol.Watermelon },
         { ReelIndex: 2, SymbolId: SlotSymbol.Watermelon },
         { ReelIndex: 3, SymbolId: SlotSymbol.Watermelon },
       ];
 
-      const result = callCalculateReward(service, reels);
-      expect(result).toBe(100);
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(100);
     });
 
     it('should double reward with TwoX', () => {
-      const reels: SpinReelResult[] = [
+      const Reels: SpinReelResult[] = [
         { ReelIndex: 0, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 1, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 2, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 3, SymbolId: SlotSymbol.TwoX },
       ];
 
-      const result = callCalculateReward(service, reels);
-      expect(result).toBe(6);
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(10);
     });
 
     it('should cancel rat effect with cheese', () => {
-      const reels: SpinReelResult[] = [
+      const Reels: SpinReelResult[] = [
         { ReelIndex: 0, SymbolId: SlotSymbol.Rat },
         { ReelIndex: 1, SymbolId: SlotSymbol.Cheese },
         { ReelIndex: 2, SymbolId: SlotSymbol.Orange },
         { ReelIndex: 3, SymbolId: SlotSymbol.Orange },
       ];
 
-      const result = callCalculateReward(service, reels);
-      expect(result).toBe(3);
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(10);
     });
 
     it('should give bonus when cheese and rat are present', () => {
-      const reels: SpinReelResult[] = [
+      const Reels: SpinReelResult[] = [
         { ReelIndex: 0, SymbolId: SlotSymbol.Rat },
         { ReelIndex: 1, SymbolId: SlotSymbol.Cheese },
         { ReelIndex: 2, SymbolId: SlotSymbol.Cheese },
         { ReelIndex: 3, SymbolId: SlotSymbol.Cheese },
       ];
 
-      const result = callCalculateReward(service, reels);
-      expect(result).toBe(3);
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(10);
+    });
+
+    it('should apply TwoX multiplier after rat + cheese bonus', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Rat },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Cheese },
+        { ReelIndex: 2, SymbolId: SlotSymbol.TwoX },
+        { ReelIndex: 3, SymbolId: SlotSymbol.TwoX },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(20);
+    });
+
+    it('should handle multiple rats with cheese and multiplier', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Rat },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Rat },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Cheese },
+        { ReelIndex: 3, SymbolId: SlotSymbol.TwoX },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(40);
+    });
+
+    it('should include egg symbol', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Egg },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Cheese },
+        { ReelIndex: 3, SymbolId: SlotSymbol.Egg },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(0);
+    });
+
+    it('should combine pig rewards with multiplier', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Pig },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Pig },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Pig },
+        { ReelIndex: 3, SymbolId: SlotSymbol.TwoX },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(120);
+    });
+
+    it('should not reward rat when present alone or with other non-cheese symbols', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Rat },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Rat },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Rat },
+        { ReelIndex: 3, SymbolId: SlotSymbol.Rat },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(0);
+    });
+
+    it('should combine orange and pig rewards', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 3, SymbolId: SlotSymbol.Pig },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(25);
+    });
+
+    it('should double combined rewards (oranges + pig + multiplier)', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 3, SymbolId: SlotSymbol.TwoX },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(10);
+    });
+
+    it('should handle oranges combined with pigs and multiplier', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Oranges },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Oranges },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Pig },
+        { ReelIndex: 3, SymbolId: SlotSymbol.TwoX },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(40);
+    });
+
+    it('should handle all oranges with multiplier', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Oranges },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Oranges },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Oranges },
+        { ReelIndex: 3, SymbolId: SlotSymbol.TwoX },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(20);
+    });
+
+    it('should zero reward when rat blocks everything with multiplier', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Rat },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 3, SymbolId: SlotSymbol.TwoX },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(0);
+    });
+
+    it('should handle multiple cheese symbols with rats', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Rat },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Rat },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Cheese },
+        { ReelIndex: 3, SymbolId: SlotSymbol.Cheese },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(20);
+    });
+
+    it('should handle no matching symbols', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Egg },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Egg },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Egg },
+        { ReelIndex: 3, SymbolId: SlotSymbol.Egg },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(0);
+    });
+
+    it('should apply rat + cheese bonus correctly', () => {
+      const Reels: SpinReelResult[] = [
+        { ReelIndex: 0, SymbolId: SlotSymbol.Rat },
+        { ReelIndex: 1, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 2, SymbolId: SlotSymbol.Orange },
+        { ReelIndex: 3, SymbolId: SlotSymbol.Cheese },
+      ];
+
+      const Result = CallCalculateReward(Service, Reels);
+      expect(Result).toBe(10);
     });
   });
 
   describe('generateRandomReels', () => {
     it('should generate 4 reels', () => {
-      const result = callGenerateRandomReels(service);
-      expect(result).toHaveLength(4);
-      expect(result[0]).toHaveProperty('ReelIndex', 0);
-      expect(result[1]).toHaveProperty('ReelIndex', 1);
-      expect(result[2]).toHaveProperty('ReelIndex', 2);
-      expect(result[3]).toHaveProperty('ReelIndex', 3);
+      const Result = CallGenerateRandomReels(Service);
+      expect(Result).toHaveLength(4);
+      expect(Result[0]).toHaveProperty('ReelIndex', 0);
+      expect(Result[1]).toHaveProperty('ReelIndex', 1);
+      expect(Result[2]).toHaveProperty('ReelIndex', 2);
+      expect(Result[3]).toHaveProperty('ReelIndex', 3);
     });
 
     it('should have valid symbol IDs', () => {
-      const result = callGenerateRandomReels(service);
-      const symbols = Object.values(SlotSymbol);
+      const Result = CallGenerateRandomReels(Service);
+      const Symbols = Object.values(SlotSymbol);
 
-      result.forEach((reel) => {
-        expect(symbols).toContain(reel.SymbolId);
+      Result.forEach((Reel) => {
+        expect(Symbols).toContain(Reel.SymbolId);
       });
+    });
+
+    it('should include all valid symbols in possible outcomes', () => {
+      const Symbols = Object.values(SlotSymbol);
+      expect(Symbols).toContain(SlotSymbol.Egg);
+      expect(Symbols).toContain(SlotSymbol.Orange);
+      expect(Symbols).toContain(SlotSymbol.Oranges);
+      expect(Symbols).toContain(SlotSymbol.Watermelon);
+      expect(Symbols).toContain(SlotSymbol.Rat);
+      expect(Symbols).toContain(SlotSymbol.Cheese);
+      expect(Symbols).toContain(SlotSymbol.TwoX);
+      expect(Symbols).toContain(SlotSymbol.Pig);
+      expect(Symbols.length).toBe(8);
+    });
+
+    it('should generate reels with different indices', () => {
+      const Result = CallGenerateRandomReels(Service);
+      const Indices = Result.map((Reel) => Reel.ReelIndex);
+      expect(Indices).toEqual([0, 1, 2, 3]);
+    });
+
+    it('should select symbols according to configured probability', () => {
+      // Orange: 0.00 - 0.25
+      // Oranges: 0.25 - 0.45
+      // Pig: 0.45 - 0.50
+      // TwoX: 0.50 - 0.55
+      // Rat: 0.55 - 0.70
+      // Cheese: 0.70 - 0.80
+      // Watermelon: 0.80 - 0.90
+      // Egg: 0.90 - 1.00
+
+      const OriginalRandom = Math.random;
+      try {
+        const Values = [0.0, 0.3, 0.46, 0.52, 0.6, 0.75, 0.85, 0.95];
+        const Expected = [
+          SlotSymbol.Orange,
+          SlotSymbol.Oranges,
+          SlotSymbol.Pig,
+          SlotSymbol.TwoX,
+          SlotSymbol.Rat,
+          SlotSymbol.Cheese,
+          SlotSymbol.Watermelon,
+          SlotSymbol.Egg,
+        ];
+
+        Values.forEach((V, I) => {
+          jest.spyOn(Math, 'random').mockReturnValueOnce(V);
+          const SelectedSymbol = (
+            Service as unknown as SlotSessionServicePrivate
+          ).generateRandomReels()[0].SymbolId;
+          expect(SelectedSymbol).toBe(Expected[I]);
+        });
+      } finally {
+        Math.random = OriginalRandom;
+        jest.restoreAllMocks();
+      }
     });
   });
 
   describe('create', () => {
-    const mockSlotMachine: SlotMachine = {
+    const MockSlotMachine: SlotMachine = {
       SlotMachineId: 1,
       Name: 'Test Machine',
       Description: 'Test machine',
@@ -307,8 +519,8 @@ describe('SlotSessionService', () => {
       Active: true,
     };
 
-    const mockUserBalance = { ChipBalance: 100 };
-    const savedSession = {
+    const MockUserBalance = { ChipBalance: 100 };
+    const SavedSession = {
       SlotSessionId: 1,
       UserId: 'user1',
       SlotMachineId: 1,
@@ -323,23 +535,26 @@ describe('SlotSessionService', () => {
     } as unknown as SlotSession;
 
     it('should create session successfully', async () => {
-      mockSlotMachineService.FindOne.mockResolvedValue(mockSlotMachine);
-      mockSlotSessionRepo.findOne.mockResolvedValue(null);
-      authService.GetChipBalance.mockResolvedValue(mockUserBalance);
-      authService.UpdateChipBalance.mockResolvedValue(undefined);
-      slotSessionRepo.create.mockReturnValue(savedSession);
-      slotSessionRepo.save.mockResolvedValue(savedSession);
+      MockSlotMachineService.FindOne.mockResolvedValue(MockSlotMachine);
+      MockSlotSessionRepo.findOne.mockResolvedValue(null);
+      AuthServiceMockInstance.GetChipBalance.mockResolvedValue(MockUserBalance);
+      AuthServiceMockInstance.UpdateChipBalance.mockResolvedValue(undefined);
+      SlotSessionRepo.create.mockReturnValue(SavedSession);
+      SlotSessionRepo.save.mockResolvedValue(SavedSession);
 
-      const dto = new CreateSlotSessionDto();
-      const result = await service.create(1, dto, 'user1');
+      const Dto = new CreateSlotSessionDto();
+      const Result = await Service.create(1, Dto, 'user1');
 
-      expect(result).toHaveProperty('session');
-      expect(result).toHaveProperty('currentBalance');
-      expect(authService.UpdateChipBalance).toHaveBeenCalledWith('user1', -10);
+      expect(Result).toHaveProperty('session');
+      expect(Result).toHaveProperty('currentBalance');
+      expect(AuthServiceMockInstance.UpdateChipBalance).toHaveBeenCalledWith(
+        'user1',
+        -10
+      );
     });
 
     it('should throw error when user has active session with chips', async () => {
-      const activeSessionWithChips = {
+      const ActiveSessionWithChips = {
         SlotSessionId: 2,
         UserId: 'user1',
         SlotMachineId: 1,
@@ -347,13 +562,13 @@ describe('SlotSessionService', () => {
         CurrentRewardSnapshot: 5,
       } as unknown as SlotSession;
 
-      mockSlotMachineService.FindOne.mockResolvedValue(mockSlotMachine);
-      slotSessionRepo.findOne.mockResolvedValue(activeSessionWithChips);
+      MockSlotMachineService.FindOne.mockResolvedValue(MockSlotMachine);
+      SlotSessionRepo.findOne.mockResolvedValue(ActiveSessionWithChips);
 
-      const dto = new CreateSlotSessionDto();
+      const Dto = new CreateSlotSessionDto();
 
       try {
-        await service.create(1, dto, 'user1');
+        await Service.create(1, Dto, 'user1');
         fail('Expected error to be thrown');
       } catch (error: unknown) {
         if (!(error instanceof Error)) {
@@ -367,14 +582,16 @@ describe('SlotSessionService', () => {
     });
 
     it('should throw error when insufficient chips', async () => {
-      mockSlotMachineService.FindOne.mockResolvedValue(mockSlotMachine);
-      slotSessionRepo.findOne.mockResolvedValue(null);
-      authService.GetChipBalance.mockResolvedValue({ ChipBalance: 5 });
+      MockSlotMachineService.FindOne.mockResolvedValue(MockSlotMachine);
+      SlotSessionRepo.findOne.mockResolvedValue(null);
+      AuthServiceMockInstance.GetChipBalance.mockResolvedValue({
+        ChipBalance: 5,
+      });
 
-      const dto = new CreateSlotSessionDto();
+      const Dto = new CreateSlotSessionDto();
 
       try {
-        await service.create(1, dto, 'user1');
+        await Service.create(1, Dto, 'user1');
         fail('Expected error to be thrown');
       } catch (error: unknown) {
         if (!(error instanceof Error)) {
@@ -387,7 +604,7 @@ describe('SlotSessionService', () => {
   });
 
   describe('reroll', () => {
-    const mockSlotMachine: SlotMachine = {
+    const MockSlotMachine: SlotMachine = {
       SlotMachineId: 1,
       Name: 'Test Machine',
       Description: 'Test machine',
@@ -398,7 +615,7 @@ describe('SlotSessionService', () => {
       Active: true,
     };
 
-    const mockSession = {
+    const MockSession = {
       SlotSessionId: 1,
       UserId: 'user1',
       SlotMachineId: 1,
@@ -420,30 +637,35 @@ describe('SlotSessionService', () => {
     } as unknown as SlotSession;
 
     it('should reroll successfully', async () => {
-      mockSlotMachineService.FindOne.mockResolvedValue(mockSlotMachine);
-      slotSessionRepo.findOne.mockResolvedValue(mockSession);
-      authService.GetChipBalance.mockResolvedValue({ ChipBalance: 100 });
-      authService.UpdateChipBalance.mockResolvedValue(undefined);
-      slotSessionRepo.save.mockResolvedValue(mockSession);
+      MockSlotMachineService.FindOne.mockResolvedValue(MockSlotMachine);
+      SlotSessionRepo.findOne.mockResolvedValue(MockSession);
+      AuthServiceMockInstance.GetChipBalance.mockResolvedValue({
+        ChipBalance: 100,
+      });
+      AuthServiceMockInstance.UpdateChipBalance.mockResolvedValue(undefined);
+      SlotSessionRepo.save.mockResolvedValue(MockSession);
 
-      const result = await service.reroll(1, 1, 0, 'user1');
+      const Result = await Service.reroll(1, 1, 0, 'user1');
 
-      expect(result).toHaveProperty('session');
-      expect(result).toHaveProperty('currentBalance');
-      expect(authService.UpdateChipBalance).toHaveBeenCalledWith('user1', -5);
+      expect(Result).toHaveProperty('session');
+      expect(Result).toHaveProperty('currentBalance');
+      expect(AuthServiceMockInstance.UpdateChipBalance).toHaveBeenCalledWith(
+        'user1',
+        -5
+      );
     });
 
     it('should throw error when no rerolls left', async () => {
-      const sessionWithoutRerolls = {
-        ...mockSession,
+      const SessionWithoutRerolls = {
+        ...MockSession,
         CurrentRerollsSpent: { Rerolls: { Max: 5, Used: 5 } },
       } as unknown as SlotSession;
 
-      mockSlotMachineService.FindOne.mockResolvedValue(mockSlotMachine);
-      slotSessionRepo.findOne.mockResolvedValue(sessionWithoutRerolls);
+      MockSlotMachineService.FindOne.mockResolvedValue(MockSlotMachine);
+      SlotSessionRepo.findOne.mockResolvedValue(SessionWithoutRerolls);
 
       try {
-        await service.reroll(1, 1, 0, 'user1');
+        await Service.reroll(1, 1, 0, 'user1');
         fail('Expected error to be thrown');
       } catch (error: unknown) {
         if (!(error instanceof Error)) {
@@ -455,16 +677,16 @@ describe('SlotSessionService', () => {
     });
 
     it('should throw error when session is not active', async () => {
-      const inactiveSession = {
-        ...mockSession,
+      const InactiveSession = {
+        ...MockSession,
         Status: SlotSessionStatus.Ended,
       } as unknown as SlotSession;
 
-      mockSlotMachineService.FindOne.mockResolvedValue(mockSlotMachine);
-      slotSessionRepo.findOne.mockResolvedValue(inactiveSession);
+      MockSlotMachineService.FindOne.mockResolvedValue(MockSlotMachine);
+      SlotSessionRepo.findOne.mockResolvedValue(InactiveSession);
 
       try {
-        await service.reroll(1, 1, 0, 'user1');
+        await Service.reroll(1, 1, 0, 'user1');
         fail('Expected error to be thrown');
       } catch (error: unknown) {
         if (!(error instanceof Error)) {
@@ -473,6 +695,78 @@ describe('SlotSessionService', () => {
 
         expect(error.message).toBe('Session is not active');
       }
+    });
+
+    it('should increment rerolls used counter', async () => {
+      const SessionWithRerolls = {
+        ...MockSession,
+        CurrentRerollsSpent: { Rerolls: { Max: 5, Used: 2 } },
+      } as unknown as SlotSession;
+
+      MockSlotMachineService.FindOne.mockResolvedValue(MockSlotMachine);
+      SlotSessionRepo.findOne.mockResolvedValue(SessionWithRerolls);
+      AuthServiceMockInstance.GetChipBalance.mockResolvedValue({
+        ChipBalance: 100,
+      });
+      AuthServiceMockInstance.UpdateChipBalance.mockResolvedValue(undefined);
+
+      const UpdatedSession = {
+        ...SessionWithRerolls,
+        CurrentRerollsSpent: { Rerolls: { Max: 5, Used: 3 } },
+      } as unknown as SlotSession;
+
+      SlotSessionRepo.save.mockResolvedValue(UpdatedSession);
+
+      const Result = await Service.reroll(1, 1, 0, 'user1');
+
+      const SavedSession = SlotSessionRepo.save.mock.calls[0][0];
+      expect(SavedSession.CurrentRerollsSpent.Rerolls.Used).toBe(3);
+      expect(Result).toHaveProperty('session');
+    });
+
+    it('should throw error when insufficient chips for reroll', async () => {
+      MockSlotMachineService.FindOne.mockResolvedValue(MockSlotMachine);
+      SlotSessionRepo.findOne.mockResolvedValue(MockSession);
+      AuthServiceMockInstance.GetChipBalance.mockResolvedValue({
+        ChipBalance: 2,
+      });
+
+      try {
+        await Service.reroll(1, 1, 0, 'user1');
+        fail('Expected error to be thrown');
+      } catch (error: unknown) {
+        if (!(error instanceof Error)) {
+          fail('Expected an Error instance');
+        }
+
+        expect(error.message).toBe('Insufficient chips to reroll');
+      }
+    });
+
+    it('should update reward after reroll', async () => {
+      const SessionBeforeReroll = {
+        ...MockSession,
+        CurrentRewardSnapshot: 10,
+      } as unknown as SlotSession;
+
+      MockSlotMachineService.FindOne.mockResolvedValue(MockSlotMachine);
+      SlotSessionRepo.findOne.mockResolvedValue(SessionBeforeReroll);
+      AuthServiceMockInstance.GetChipBalance.mockResolvedValue({
+        ChipBalance: 100,
+      });
+      AuthServiceMockInstance.UpdateChipBalance.mockResolvedValue(undefined);
+
+      const SessionAfterReroll = {
+        ...SessionBeforeReroll,
+        CurrentRewardSnapshot: 25,
+      } as unknown as SlotSession;
+
+      SlotSessionRepo.save.mockResolvedValue(SessionAfterReroll);
+
+      const Result = await Service.reroll(1, 1, 0, 'user1');
+
+      expect(Result).toHaveProperty('session');
+      expect(SlotSessionRepo.save).toHaveBeenCalled();
     });
   });
 
@@ -505,17 +799,22 @@ describe('SlotSessionService', () => {
       MockCashOutRepo.save.mockImplementation((Session) =>
         Promise.resolve(Session)
       );
-      authService.UpdateChipBalance.mockResolvedValue(undefined);
-      authService.GetChipBalance.mockResolvedValue({ ChipBalance: 142 });
+      AuthServiceMockInstance.UpdateChipBalance.mockResolvedValue(undefined);
+      AuthServiceMockInstance.GetChipBalance.mockResolvedValue({
+        ChipBalance: 142,
+      });
 
-      const Result = await service.cashOut(SlotMachineId, SessionId, UserId);
+      const Result = await Service.cashOut(SlotMachineId, SessionId, UserId);
 
-      expect(authService.UpdateChipBalance).toHaveBeenCalledWith(UserId, 42);
+      expect(AuthServiceMockInstance.UpdateChipBalance).toHaveBeenCalledWith(
+        UserId,
+        42
+      );
 
-      const savedSession = MockCashOutRepo.save.mock.calls[0][0];
-      expect(savedSession.SlotSessionId).toBe(SessionId);
-      expect(savedSession.Status).toBe(SlotSessionStatus.Ended);
-      expect(savedSession.EndedAt).toBeInstanceOf(Date);
+      const SavedSession = MockCashOutRepo.save.mock.calls[0][0];
+      expect(SavedSession.SlotSessionId).toBe(SessionId);
+      expect(SavedSession.Status).toBe(SlotSessionStatus.Ended);
+      expect(SavedSession.EndedAt).toBeInstanceOf(Date);
       expect(MockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
       expect(MockQueryRunner.rollbackTransaction).not.toHaveBeenCalled();
       expect(MockQueryRunner.release).toHaveBeenCalledTimes(1);
@@ -532,10 +831,10 @@ describe('SlotSessionService', () => {
       MockCashOutRepo.findOne.mockResolvedValue(EndedSession);
 
       await expect(
-        service.cashOut(SlotMachineId, SessionId, UserId)
+        Service.cashOut(SlotMachineId, SessionId, UserId)
       ).rejects.toThrow(BadRequestException);
 
-      expect(authService.UpdateChipBalance).not.toHaveBeenCalled();
+      expect(AuthServiceMockInstance.UpdateChipBalance).not.toHaveBeenCalled();
       expect(MockCashOutRepo.save).not.toHaveBeenCalled();
       expect(MockQueryRunner.commitTransaction).not.toHaveBeenCalled();
       expect(MockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
@@ -546,16 +845,90 @@ describe('SlotSessionService', () => {
       const ActiveSession = BuildActiveSession({ CurrentRewardSnapshot: 42 });
       const CreditError = new Error('Chip service unavailable');
       MockCashOutRepo.findOne.mockResolvedValue(ActiveSession);
-      authService.UpdateChipBalance.mockRejectedValue(CreditError);
+      AuthServiceMockInstance.UpdateChipBalance.mockRejectedValue(CreditError);
 
       await expect(
-        service.cashOut(SlotMachineId, SessionId, UserId)
+        Service.cashOut(SlotMachineId, SessionId, UserId)
       ).rejects.toThrow(CreditError);
 
       expect(MockCashOutRepo.save).not.toHaveBeenCalled();
       expect(MockQueryRunner.commitTransaction).not.toHaveBeenCalled();
       expect(MockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
       expect(MockQueryRunner.release).toHaveBeenCalledTimes(1);
+    });
+
+    it('should credit correct reward from Rat + Cheese + 2x combination', async () => {
+      const ActiveSession = BuildActiveSession({ CurrentRewardSnapshot: 20 });
+      MockCashOutRepo.findOne.mockResolvedValue(ActiveSession);
+      MockCashOutRepo.save.mockImplementation((Session) =>
+        Promise.resolve(Session)
+      );
+      AuthServiceMockInstance.UpdateChipBalance.mockResolvedValue(undefined);
+      AuthServiceMockInstance.GetChipBalance.mockResolvedValue({
+        ChipBalance: 170,
+      });
+
+      const Result = await Service.cashOut(SlotMachineId, SessionId, UserId);
+
+      expect(AuthServiceMockInstance.UpdateChipBalance).toHaveBeenCalledWith(
+        UserId,
+        20
+      );
+      expect(Result.finalBalance).toBe(170);
+      expect(MockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle jackpot watermelon reward', async () => {
+      const ActiveSession = BuildActiveSession({ CurrentRewardSnapshot: 100 });
+      MockCashOutRepo.findOne.mockResolvedValue(ActiveSession);
+      MockCashOutRepo.save.mockImplementation((Session) =>
+        Promise.resolve(Session)
+      );
+      AuthServiceMockInstance.UpdateChipBalance.mockResolvedValue(undefined);
+      AuthServiceMockInstance.GetChipBalance.mockResolvedValue({
+        ChipBalance: 200,
+      });
+
+      const Result = await Service.cashOut(SlotMachineId, SessionId, UserId);
+
+      expect(AuthServiceMockInstance.UpdateChipBalance).toHaveBeenCalledWith(
+        UserId,
+        100
+      );
+      expect(Result.finalBalance).toBe(200);
+      expect(MockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle complex combined rewards', async () => {
+      const ActiveSession = BuildActiveSession({ CurrentRewardSnapshot: 90 });
+      MockCashOutRepo.findOne.mockResolvedValue(ActiveSession);
+      MockCashOutRepo.save.mockImplementation((Session) =>
+        Promise.resolve(Session)
+      );
+      AuthServiceMockInstance.UpdateChipBalance.mockResolvedValue(undefined);
+      AuthServiceMockInstance.GetChipBalance.mockResolvedValue({
+        ChipBalance: 190,
+      });
+
+      const Result = await Service.cashOut(SlotMachineId, SessionId, UserId);
+
+      expect(AuthServiceMockInstance.UpdateChipBalance).toHaveBeenCalledWith(
+        UserId,
+        90
+      );
+      expect(Result.finalBalance).toBe(190);
+      expect(MockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not save session when session not found', async () => {
+      MockCashOutRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        Service.cashOut(SlotMachineId, SessionId, UserId)
+      ).rejects.toThrow();
+
+      expect(MockCashOutRepo.save).not.toHaveBeenCalled();
+      expect(MockQueryRunner.rollbackTransaction).toHaveBeenCalled();
     });
   });
 });

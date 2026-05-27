@@ -322,8 +322,27 @@ export class SlotSessionService {
   }
 
   private getRandomSymbol(): SlotSymbol {
-    const Symbols = Object.values(SlotSymbol);
-    return Symbols[Math.floor(Math.random() * Symbols.length)];
+    const Weighted: { Symbol: SlotSymbol; Weight: number }[] = [
+      { Symbol: SlotSymbol.Orange, Weight: 25 },
+      { Symbol: SlotSymbol.Oranges, Weight: 20 },
+      { Symbol: SlotSymbol.Pig, Weight: 5 },
+      { Symbol: SlotSymbol.TwoX, Weight: 5 },
+      { Symbol: SlotSymbol.Rat, Weight: 15 },
+      { Symbol: SlotSymbol.Cheese, Weight: 10 },
+      { Symbol: SlotSymbol.Watermelon, Weight: 10 },
+      { Symbol: SlotSymbol.Egg, Weight: 10 },
+    ];
+
+    const Total = Weighted.reduce((s, item) => s + item.Weight, 0);
+    const RandomValue = Math.random() * Total;
+    let Accumulator = 0;
+    for (const WeightedItem of Weighted) {
+      Accumulator += WeightedItem.Weight;
+      if (RandomValue < Accumulator) return WeightedItem.Symbol;
+    }
+
+    // Fallback
+    return Weighted[Weighted.length - 1].Symbol;
   }
 
   private calculateReward(Reels: SpinReelResult[]): number {
@@ -345,25 +364,25 @@ export class SlotSessionService {
       Reward = 0;
     } else {
       const OrangeCount = SymbolCounts.get(SlotSymbol.Orange) || 0;
-      if (OrangeCount === 3) Reward += 3;
-      else if (OrangeCount === 4) Reward += 5;
+      if (OrangeCount === 3) Reward += 5;
+      else if (OrangeCount === 4) Reward += 8;
 
       const OrangesCount = SymbolCounts.get(SlotSymbol.Oranges) || 0;
-      if (OrangesCount === 3) Reward += 9;
+      if (OrangesCount === 3) Reward += 10;
       else if (OrangesCount === 4) Reward += 15;
 
       const PigCount = SymbolCounts.get(SlotSymbol.Pig) || 0;
-      Reward += PigCount * 10;
-
-      const TwoXCount = SymbolCounts.get(SlotSymbol.TwoX) || 0;
-      if (TwoXCount > 0) Reward *= 2;
+      Reward += PigCount * 20;
 
       const WatermelonCount = SymbolCounts.get(SlotSymbol.Watermelon) || 0;
       if (WatermelonCount === 4) Reward += 100;
 
       if (HasCheese > 0 && HasRat > 0) {
-        Reward += HasRat * 3;
+        Reward += HasRat * 10;
       }
+
+      const TwoXCount = SymbolCounts.get(SlotSymbol.TwoX) || 0;
+      if (TwoXCount > 0) Reward *= 2;
     }
 
     return Reward;

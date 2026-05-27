@@ -1,15 +1,25 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SlotMachine } from '../domain/slot-machine.entity';
 import { CreateSlotMachineDto } from '../domain/dto/create-slot-machine.dto';
 import { UpdateSlotMachineDto } from '../domain/dto/update-slot-machine.dto';
+import {
+  SlotSession,
+  SlotSessionStatus,
+} from '../sessions/domain/slot-session.entity';
 
 @Injectable()
 export class SlotMachineService {
   constructor(
     @InjectRepository(SlotMachine)
-    private readonly SlotMachineRepo: Repository<SlotMachine>
+    private readonly SlotMachineRepo: Repository<SlotMachine>,
+    @InjectRepository(SlotSession)
+    private readonly SlotSessionRepo: Repository<SlotSession>
   ) {}
 
   async Create(DTO: CreateSlotMachineDto): Promise<SlotMachine> {
@@ -67,6 +77,20 @@ export class SlotMachineService {
 
   async Remove(Id: number): Promise<void> {
     const SlotMachine = await this.FindOne(Id);
+
+    const activeSessionCount = await this.SlotSessionRepo.count({
+      where: {
+        SlotMachineId: Id,
+        Status: SlotSessionStatus.Active,
+      },
+    });
+
+    if (activeSessionCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete slot machine while there are active sessions.'
+      );
+    }
+
     await this.SlotMachineRepo.remove(SlotMachine);
   }
 }
