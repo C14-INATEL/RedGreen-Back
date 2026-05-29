@@ -13,6 +13,7 @@ describe('AuthService', () => {
   let MockUserRepo: {
     findOne: jest.Mock;
     save: jest.Mock;
+    find: jest.Mock;
   };
   let MockJwtService: Partial<JwtService>;
 
@@ -35,6 +36,7 @@ describe('AuthService', () => {
     MockUserRepo = {
       findOne: jest.fn(),
       save: jest.fn(),
+      find: jest.fn(),
     };
 
     MockJwtService = {
@@ -287,6 +289,81 @@ describe('AuthService', () => {
 
     await expect(DeletePromise).rejects.toThrow(BadRequestException);
     await expect(DeletePromise).rejects.toThrow('User not found');
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: 'MissingUser' },
+    });
+    expect(MockUserRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('should return top 10 users ordered by ChipBalance', async () => {
+    const TopUsers: User[] = [
+      { ...ValidUser, UserId: 'user-1', ChipBalance: 5000, Active: true },
+      { ...ValidUser, UserId: 'user-2', ChipBalance: 4500, Active: true },
+      { ...ValidUser, UserId: 'user-3', ChipBalance: 4000, Active: true },
+    ];
+
+    MockUserRepo.find.mockResolvedValue(TopUsers);
+
+    const Result = await service.GetRank();
+
+    expect(MockUserRepo.find).toHaveBeenCalledWith({
+      where: { Active: true },
+      order: { ChipBalance: 'DESC' },
+      take: 10,
+    });
+    expect(Result).toHaveLength(3);
+    expect(Result[0]).toEqual(
+      expect.objectContaining({
+        Position: 1,
+        UserId: 'user-1',
+        ChipBalance: 5000,
+      })
+    );
+    expect(Result[0]).not.toHaveProperty('Password');
+    expect(Result[1]).toEqual(
+      expect.objectContaining({
+        Position: 2,
+        UserId: 'user-2',
+        ChipBalance: 4500,
+      })
+    );
+    expect(Result[2]).toEqual(
+      expect.objectContaining({
+        Position: 3,
+        UserId: 'user-3',
+        ChipBalance: 4000,
+      })
+    );
+  });
+
+  it('should reactivate a user account', async () => {
+    const InactiveUser = { ...ValidUser, Active: false };
+    const ReactivatedUser = { ...ValidUser, Active: true };
+
+    MockUserRepo.findOne.mockResolvedValue(InactiveUser);
+    MockUserRepo.save.mockResolvedValue(ReactivatedUser);
+
+    const Result = await service.ReactivateAccount(InactiveUser.UserId);
+
+    expect(MockUserRepo.findOne).toHaveBeenCalledWith({
+      where: { UserId: InactiveUser.UserId },
+    });
+    expect(MockUserRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        UserId: InactiveUser.UserId,
+        Active: true,
+      })
+    );
+    expect(Result).toEqual({ message: 'Account reactivated successfully' });
+  });
+
+  it('should throw BadRequestException when reactivating missing user', async () => {
+    MockUserRepo.findOne.mockResolvedValue(null);
+
+    const ReactivatePromise = service.ReactivateAccount('MissingUser');
+
+    await expect(ReactivatePromise).rejects.toThrow(BadRequestException);
+    await expect(ReactivatePromise).rejects.toThrow('User not found');
     expect(MockUserRepo.findOne).toHaveBeenCalledWith({
       where: { UserId: 'MissingUser' },
     });
