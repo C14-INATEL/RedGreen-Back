@@ -1,23 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { GambitCard } from '../types/gambit-session.types';
 
-export class EffectDto {
-  @ApiProperty({
-    example: 'MULTIPLY_POINTS',
-    description: 'Type of the card effect',
-  })
-  Type: string;
-
-  @ApiPropertyOptional({
-    example: 2,
-    description: 'Value associated with the effect, if applicable',
-  })
-  Value?: number;
-}
-
-export class CardDto {
+export class GridCardDto {
   @ApiProperty({
     example: 0,
-    description: 'Position of the card on the grid',
+    description:
+      'Sequential index of the cell in a 5x5 grid (0 = top-left, 24 = bottom-right):\n\n' +
+      ' 0  1  2  3  4\n\n' +
+      ' 5  6  7  8  9\n\n' +
+      '10 11 12 13 14\n\n' +
+      '15 16 17 18 19\n\n' +
+      '20 21 22 23 24',
   })
   Position: number;
 
@@ -27,174 +20,49 @@ export class CardDto {
   })
   Points: number;
 
-  @ApiProperty({
-    type: 'object',
+  @ApiPropertyOptional({
+    enum: GambitCard,
+    enumName: 'GambitCard',
     nullable: true,
-    description: 'Effect applied by this card, or null if none',
-    properties: {
-      Type: {
-        type: 'string',
-        example: 'MULTIPLY_POINTS',
-        description: 'Type of the card effect',
-      },
-      Value: {
-        type: 'number',
-        example: 2,
-        description: 'Value associated with the effect, if applicable',
-      },
-    },
+    description: 'Effect card placed on this position, or null if none',
   })
-  Effect: EffectDto | null;
+  Effect: GambitCard | null;
 }
 
 export class PendingEventDto {
   @ApiProperty({
     example: 'Good',
-    description: 'Phase classification of the event',
+    enum: ['Good', 'Bad', 'Neutral'],
+    description: 'Nature classification of the pending event',
   })
-  Phase: string;
+  EventType: 'Good' | 'Bad' | 'Neutral';
 
   @ApiProperty({
     type: 'array',
-    description: 'Effects offered to the player during this event',
-    items: {
-      type: 'object',
-      properties: {
-        Type: {
-          type: 'string',
-          example: 'MULTIPLY_POINTS',
-          description: 'Type of the card effect',
-        },
-        Value: {
-          type: 'number',
-          example: 2,
-          description: 'Value associated with the effect, if applicable',
-        },
-      },
-    },
+    items: { type: 'string', enum: Object.values(GambitCard) },
+    description: 'Three effect cards offered to the player',
   })
-  OfferedEffects: EffectDto[];
-
-  @ApiProperty({
-    example: 12,
-    description: 'Grid position targeted by this event',
-  })
-  TargetPosition: number;
+  CardsOffered: [GambitCard, GambitCard, GambitCard];
 }
 
 export class CurrentGridSnapshotDto {
   @ApiProperty({
-    type: 'array',
+    type: () => [GridCardDto],
     description:
       'Cards not yet revealed. This array is stripped before any response reaches the client.',
-    items: {
-      type: 'object',
-      properties: {
-        Position: {
-          type: 'number',
-          example: 0,
-          description: 'Position of the card on the grid',
-        },
-        Points: {
-          type: 'number',
-          example: 100,
-          description: 'Point value of this card',
-        },
-        Effect: {
-          type: 'object',
-          nullable: true,
-          description: 'Effect applied by this card, or null if none',
-          properties: {
-            Type: {
-              type: 'string',
-              example: 'MULTIPLY_POINTS',
-              description: 'Type of the card effect',
-            },
-            Value: {
-              type: 'number',
-              example: 2,
-              description: 'Value associated with the effect, if applicable',
-            },
-          },
-        },
-      },
-    },
   })
-  Unrevealed: CardDto[];
+  Unrevealed: GridCardDto[];
 
   @ApiProperty({
-    type: 'array',
+    type: () => [GridCardDto],
     description: 'Cards that have already been revealed',
-    items: {
-      type: 'object',
-      properties: {
-        Position: {
-          type: 'number',
-          example: 0,
-          description: 'Position of the card on the grid',
-        },
-        Points: {
-          type: 'number',
-          example: 100,
-          description: 'Point value of this card',
-        },
-        Effect: {
-          type: 'object',
-          nullable: true,
-          description: 'Effect applied by this card, or null if none',
-          properties: {
-            Type: {
-              type: 'string',
-              example: 'MULTIPLY_POINTS',
-              description: 'Type of the card effect',
-            },
-            Value: {
-              type: 'number',
-              example: 2,
-              description: 'Value associated with the effect, if applicable',
-            },
-          },
-        },
-      },
-    },
   })
-  Revealed: CardDto[];
+  Revealed: GridCardDto[];
 
   @ApiProperty({
-    type: 'object',
+    type: () => PendingEventDto,
     nullable: true,
     description: 'Active pending event, or null if no event is in progress',
-    properties: {
-      Phase: {
-        type: 'string',
-        example: 'Good',
-        description: 'Phase classification of the event',
-      },
-      OfferedEffects: {
-        type: 'array',
-        description: 'Effects offered to the player during this event',
-        items: {
-          type: 'object',
-          properties: {
-            Type: {
-              type: 'string',
-              example: 'MULTIPLY_POINTS',
-              description: 'Type of the card effect',
-            },
-            Value: {
-              type: 'number',
-              example: 2,
-              description: 'Value associated with the effect, if applicable',
-            },
-          },
-        },
-      },
-      TargetPosition: {
-        type: 'number',
-        example: 12,
-        description: 'Grid position targeted by this event',
-      },
-    },
   })
   PendingEvent: PendingEventDto | null;
 }
