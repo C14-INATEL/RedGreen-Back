@@ -64,4 +64,14 @@ export class UserController {
   ) {
     return this.AuthService.UpdateProfile(CurrentUser.UserId, DTO);
   }
+
+  @Patch('reactivate')
+  @ApiOperation({
+    summary: 'Reactivate User account',
+  })
+  async ReactivateAccount(
+    @CurrentUser() CurrentUser: { UserId: string; UserType: string }
+  ) {
+    return this.AuthService.ReactivateAccount(CurrentUser.UserId);
+  }
 }
