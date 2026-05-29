@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   Column,
   Entity,
@@ -9,6 +9,7 @@ import {
 import { GambitTable } from '../../table/domain/gambit-table.entity';
 import { User } from '../../../auth/domain/user.entity';
 import type { CurrentGridSnapshot } from './types/gambit-session.types';
+import { GambitCard } from './types/gambit-session.types';
 import { CurrentGridSnapshotDto } from './dto/current-grid-snapshot.dto';
 
 export enum GambitSessionStatus {
@@ -59,13 +60,10 @@ export class GambitSession {
   @Column({ type: 'int' })
   CardsPurchased: number;
 
-  @ApiProperty({ example: 0, description: 'Number of cards revealed so far' })
-  @Column({ type: 'int', default: 0 })
-  CardsRevealed: number;
-
   @ApiProperty({
     example: 0,
-    description: 'Number of manual card flips performed',
+    description:
+      'Number of manual card flips performed by the player. Used to determine when the next PendingEvent triggers.',
   })
   @Column({ type: 'int', default: 0 })
   ManualFlipsCount: number;
@@ -81,10 +79,11 @@ export class GambitSession {
 
   @ApiProperty({
     example: 0,
-    description: 'Current accumulated reward snapshot',
+    description:
+      'Raw points accumulated during the session. Can be negative, zero, or positive. The final reward in chips is calculated at session end by applying the table multipliers to this value.',
   })
   @Column({ type: 'int', default: 0 })
-  CurrentRewardSnapshot: number;
+  AccumulatedPoints: number;
 
   @ApiProperty({
     enum: GambitSessionStatus,
@@ -94,13 +93,22 @@ export class GambitSession {
   @Column({ type: 'enum', enum: GambitSessionStatus })
   Status: GambitSessionStatus;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: null,
     description: 'Final result of the session in chips',
     nullable: true,
   })
   @Column({ type: 'int', nullable: true })
   Result: number | null;
+
+  @ApiProperty({
+    enum: GambitCard,
+    enumName: 'GambitCard',
+    nullable: true,
+    description: 'Effect card to be applied on the next scoring card revealed',
+  })
+  @Column({ type: 'varchar', nullable: true, default: null })
+  NextEffect: GambitCard | null;
 
   @ApiProperty({ description: 'Session creation timestamp' })
   @Column({ type: 'timestamp', default: () => 'NOW()' })

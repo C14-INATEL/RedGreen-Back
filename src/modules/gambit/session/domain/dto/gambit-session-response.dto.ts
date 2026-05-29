@@ -3,6 +3,7 @@ import { GambitSessionStatus } from '../gambit-session.entity';
 import { GambitTableResponseDto } from '../../../table/domain/dto/gambit-table-response.dto';
 import { CurrentGridSnapshotDto } from './current-grid-snapshot.dto';
 import type { CurrentGridSnapshot } from '../types/gambit-session.types';
+import { GambitCard } from '../types/gambit-session.types';
 
 export class GambitSessionResponseDto {
   @ApiProperty({
@@ -36,22 +37,18 @@ export class GambitSessionResponseDto {
   CardsPurchased: number;
 
   @ApiProperty({
-    example: 2,
-    description: 'Number of cards revealed so far',
-  })
-  CardsRevealed: number;
-
-  @ApiProperty({
     example: 0,
-    description: 'Number of manual card flips performed',
+    description:
+      'Number of manual card flips performed by the player. Used to determine when the next PendingEvent triggers.',
   })
   ManualFlipsCount: number;
 
   @ApiProperty({
-    example: 100,
-    description: 'Current accumulated reward snapshot',
+    example: 150,
+    description:
+      'Raw points accumulated during the session. Can be negative, zero, or positive. The final reward in chips is calculated at session end by applying the table multipliers to this value.',
   })
-  CurrentRewardSnapshot: number;
+  AccumulatedPoints: number;
 
   @ApiProperty({
     type: () => CurrentGridSnapshotDto,
@@ -60,6 +57,14 @@ export class GambitSessionResponseDto {
       'Current state of the game grid. The Unrevealed array is always stripped before any response reaches the client.',
   })
   CurrentGridSnapshot: CurrentGridSnapshot | null;
+
+  @ApiProperty({
+    enum: GambitCard,
+    enumName: 'GambitCard',
+    nullable: true,
+    description: 'Effect card to be applied on the next scoring card revealed',
+  })
+  NextEffect: GambitCard | null;
 
   @ApiProperty({
     enum: GambitSessionStatus,
