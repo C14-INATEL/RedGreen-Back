@@ -1,15 +1,25 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GambitTable } from '../domain/gambit-table.entity';
 import { CreateGambitTableDto } from '../domain/dto/create-gambit-table.dto';
 import { UpdateGambitTableDto } from '../domain/dto/update-gambit-table.dto';
+import {
+  GambitSession,
+  GambitSessionStatus,
+} from '../../session/domain/gambit-session.entity';
 
 @Injectable()
 export class GambitTableService {
   constructor(
     @InjectRepository(GambitTable)
-    private readonly GambitTableRepo: Repository<GambitTable>
+    private readonly GambitTableRepo: Repository<GambitTable>,
+    @InjectRepository(GambitSession)
+    private readonly GambitSessionRepo: Repository<GambitSession>
   ) {}
 
   async Create(DTO: CreateGambitTableDto): Promise<GambitTable> {
@@ -56,6 +66,17 @@ export class GambitTableService {
 
   async Remove(Id: number): Promise<void> {
     const GambitTable = await this.FindOne(Id);
+
+    const ActiveSession = await this.GambitSessionRepo.findOne({
+      where: { GambitTableId: Id, Status: GambitSessionStatus.InProgress },
+    });
+
+    if (ActiveSession) {
+      throw new BadRequestException(
+        `Cannot deactivate GambitTable ${Id} while there are active sessions`
+      );
+    }
+
     GambitTable.Active = false;
     await this.GambitTableRepo.save(GambitTable);
   }
