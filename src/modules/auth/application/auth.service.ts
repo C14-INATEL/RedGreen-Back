@@ -204,6 +204,31 @@ export class AuthService {
     );
   }
 
+  async GetRank() {
+    const TopUsers = await this.UserRepo.find({
+      where: { Active: true },
+      order: { ChipBalance: 'DESC' },
+      take: 10,
+    });
+
+    return TopUsers.map((User, Index) => ({
+      Position: Index + 1,
+      ...this.SanitizeUser(User),
+    }));
+  }
+
+  async ReactivateAccount(UserId: string) {
+    const User = await this.UserRepo.findOne({ where: { UserId } });
+    if (!User) {
+      throw new BadRequestException('User not found');
+    }
+
+    User.Active = true;
+    await this.UserRepo.save(User);
+
+    return { message: 'Account reactivated successfully' };
+  }
+
   private SanitizeUser(User: User): Omit<User, 'Password'> {
     return Object.fromEntries(
       Object.entries(User).filter(([key]) => key !== 'Password')

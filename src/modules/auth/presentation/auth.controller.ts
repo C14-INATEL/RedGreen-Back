@@ -31,4 +31,10 @@ export class AuthController {
   async EmailExists(@Query('email') Email: string) {
     return this.AuthService.IsEmailTaken(Email);
   }
+
+  @Get('rank')
+  @ApiOperation({ summary: 'Get top 10 users with the most chips' })
+  async GetRank() {
+    return this.AuthService.GetRank();
+  }
 }
