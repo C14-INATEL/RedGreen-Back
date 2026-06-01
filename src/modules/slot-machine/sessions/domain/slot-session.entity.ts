@@ -12,10 +12,9 @@ import type {
 } from './types/slot-session.types';
 
 export enum SlotSessionStatus {
-  Active = 'Active',
-  Ended = 'Ended',
-  Interrupted = 'Interrupted',
-  Expired = 'Expired',
+  InProgress = 'InProgress',
+  Finished = 'Finished',
+  CashedOut = 'CashedOut',
 }
 
 @Entity({ name: 'SlotSession' })
@@ -53,7 +52,7 @@ export class SlotSession {
 
   @Column({
     type: 'jsonb',
-    default: () => '\'{"Rerolls":{"Max":0,"Used":0}}\'',
+    default: () => '\'{"Rerolls":{"Max":5,"Used":0}}\'',
   })
   CurrentRerollsSpent!: RerollState;
 

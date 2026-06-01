@@ -33,7 +33,7 @@ export class SlotSessionService {
     const ActiveSessionWithChips = await this.slotSessionRepo.findOne({
       where: {
         UserId: userId,
-        Status: SlotSessionStatus.Active,
+        Status: SlotSessionStatus.InProgress,
         DeletedAt: IsNull(),
       },
     });
@@ -48,7 +48,7 @@ export class SlotSessionService {
     }
 
     if (ActiveSessionWithChips) {
-      ActiveSessionWithChips.Status = SlotSessionStatus.Ended;
+      ActiveSessionWithChips.Status = SlotSessionStatus.Finished;
       ActiveSessionWithChips.EndedAt = new Date();
       await this.slotSessionRepo.save(ActiveSessionWithChips);
     }
@@ -76,14 +76,14 @@ export class SlotSessionService {
     const SlotSession = this.slotSessionRepo.create({
       UserId: userId,
       SlotMachineId: slotMachineId,
-      Status: dto.Status || SlotSessionStatus.Active,
+      Status: SlotSessionStatus.InProgress,
       StartedAt: dto.StartedAt || new Date(),
       LastInteractionAt: dto.LastInteractionAt || new Date(),
       EndedAt: dto.EndedAt ?? null,
       CurrentRewardSnapshot: Reward,
       CurrentSpinResult: { Reels },
       CurrentRerollsSpent: {
-        Rerolls: { Max: SlotMachine.MaxRerolls, Used: 0 },
+        Rerolls: { Max: 5, Used: 0 },
       },
     });
 
@@ -144,7 +144,7 @@ export class SlotSessionService {
     const ActiveSession = await this.slotSessionRepo.findOne({
       where: {
         UserId: userId,
-        Status: SlotSessionStatus.Active,
+        Status: SlotSessionStatus.InProgress,
         DeletedAt: IsNull(),
       },
     });
@@ -204,7 +204,7 @@ export class SlotSessionService {
     const SlotMachine = await this.slotMachineService.FindOne(slotMachineId);
     const SlotSession = await this.findOne(slotMachineId, id, userId);
 
-    if (SlotSession.Status !== SlotSessionStatus.Active) {
+    if (SlotSession.Status !== SlotSessionStatus.InProgress) {
       throw new BadRequestException('Session is not active');
     }
 
@@ -282,7 +282,7 @@ export class SlotSessionService {
         throw new NotFoundException('Session not found');
       }
 
-      if (Session.Status !== SlotSessionStatus.Active) {
+      if (Session.Status !== SlotSessionStatus.InProgress) {
         throw new BadRequestException('Session is not active');
       }
 
@@ -290,7 +290,7 @@ export class SlotSessionService {
 
       await this.authService.UpdateChipBalance(userId, Reward);
 
-      Session.Status = SlotSessionStatus.Ended;
+      Session.Status = SlotSessionStatus.CashedOut;
       Session.EndedAt = new Date();
 
       await SessionRepository.save(Session);
