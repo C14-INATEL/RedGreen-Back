@@ -65,6 +65,9 @@ export class SlotMachineService {
     if (DTO.Active !== undefined) {
       SlotMachine.Active = DTO.Active;
     }
+    if (DTO.TableColor !== undefined) {
+      SlotMachine.TableColor = DTO.TableColor;
+    }
 
     return this.SlotMachineRepo.save(SlotMachine);
   }
