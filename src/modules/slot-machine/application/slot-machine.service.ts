@@ -59,13 +59,6 @@ export class SlotMachineService {
     if (DTO.MinimumRerollValue !== undefined) {
       SlotMachine.MinimumRerollValue = DTO.MinimumRerollValue;
     }
-    if (DTO.MaxRerolls !== undefined) {
-      SlotMachine.MaxRerolls = DTO.MaxRerolls;
-    }
-    if (DTO.Active !== undefined) {
-      SlotMachine.Active = DTO.Active;
-    }
-
     return this.SlotMachineRepo.save(SlotMachine);
   }
 
@@ -81,7 +74,7 @@ export class SlotMachineService {
     const activeSessionCount = await this.SlotSessionRepo.count({
       where: {
         SlotMachineId: Id,
-        Status: SlotSessionStatus.Active,
+        Status: SlotSessionStatus.InProgress,
       },
     });
 
