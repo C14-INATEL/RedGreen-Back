@@ -6,7 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { GambitTable } from '../../table/domain/gambit-table.entity';
+import { GambitTable } from '../../domain/gambit-table.entity';
 import { User } from '../../../auth/domain/user.entity';
 import type { CurrentGridSnapshot } from './types/gambit-session.types';
 import { GambitCard } from './types/gambit-session.types';

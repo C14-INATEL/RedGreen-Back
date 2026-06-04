@@ -11,7 +11,7 @@ import { UpdateGambitTableDto } from '../domain/dto/update-gambit-table.dto';
 import {
   GambitSession,
   GambitSessionStatus,
-} from '../../session/domain/gambit-session.entity';
+} from '../sessions/domain/gambit-session.entity';
 
 @Injectable()
 export class GambitTableService {

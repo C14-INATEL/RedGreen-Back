@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { GambitTableService } from '../src/modules/gambit/table/application/gambit-table.service';
-import { GambitTable } from '../src/modules/gambit/table/domain/gambit-table.entity';
+import { GambitTableService } from '../src/modules/gambit/application/gambit-table.service';
+import { GambitTable } from '../src/modules/gambit/domain/gambit-table.entity';
 import {
   GambitSession,
   GambitSessionStatus,
-} from '../src/modules/gambit/session/domain/gambit-session.entity';
-import { CreateGambitTableDto } from '../src/modules/gambit/table/domain/dto/create-gambit-table.dto';
-import { UpdateGambitTableDto } from '../src/modules/gambit/table/domain/dto/update-gambit-table.dto';
+} from '../src/modules/gambit/sessions/domain/gambit-session.entity';
+import { CreateGambitTableDto } from '../src/modules/gambit/domain/dto/create-gambit-table.dto';
+import { UpdateGambitTableDto } from '../src/modules/gambit/domain/dto/update-gambit-table.dto';
 
 type GambitTableRepoMock = {
   create: jest.MockedFunction<(table: Partial<GambitTable>) => GambitTable>;

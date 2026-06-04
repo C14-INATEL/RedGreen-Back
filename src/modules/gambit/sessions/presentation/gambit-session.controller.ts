@@ -23,7 +23,7 @@ import { GambitSessionService } from '../application/gambit-session.service';
 import { CreateGambitSessionDto } from '../domain/dto/create-gambit-session.dto';
 import { UpdateGambitSessionDto } from '../domain/dto/update-gambit-session.dto';
 import { GambitSessionResponseDto } from '../domain/dto/gambit-session-response.dto';
-import { GambitTable } from '../../table/domain/gambit-table.entity';
+import { GambitTable } from '../../domain/gambit-table.entity';
 import { GambitSession } from '../domain/gambit-session.entity';
 
 @ApiExtraModels(GambitTable, GambitSession)

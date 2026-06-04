@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { GambitSessionStatus } from '../gambit-session.entity';
-import { GambitTableResponseDto } from '../../../table/domain/dto/gambit-table-response.dto';
+import { GambitTableResponseDto } from '../../../domain/dto/gambit-table-response.dto';
 import { CurrentGridSnapshotDto } from './current-grid-snapshot.dto';
 import type { CurrentGridSnapshot } from '../types/gambit-session.types';
 import { GambitCard } from '../types/gambit-session.types';

@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
-import { GambitSessionService } from '../src/modules/gambit/session/application/gambit-session.service';
+import { GambitSessionService } from '../src/modules/gambit/sessions/application/gambit-session.service';
 import {
   GambitSession,
   GambitSessionStatus,
-} from '../src/modules/gambit/session/domain/gambit-session.entity';
-import { GambitTable } from '../src/modules/gambit/table/domain/gambit-table.entity';
+} from '../src/modules/gambit/sessions/domain/gambit-session.entity';
+import { GambitTable } from '../src/modules/gambit/domain/gambit-table.entity';
 import { User } from '../src/modules/auth/domain/user.entity';
-import { CreateGambitSessionDto } from '../src/modules/gambit/session/domain/dto/create-gambit-session.dto';
-import { UpdateGambitSessionDto } from '../src/modules/gambit/session/domain/dto/update-gambit-session.dto';
+import { CreateGambitSessionDto } from '../src/modules/gambit/sessions/domain/dto/create-gambit-session.dto';
+import { UpdateGambitSessionDto } from '../src/modules/gambit/sessions/domain/dto/update-gambit-session.dto';
 
 type GambitSessionRepoMock = {
   create: jest.MockedFunction<
