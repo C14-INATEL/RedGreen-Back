@@ -32,10 +32,8 @@ const MockTable: GambitTable = {
   MinimumChipsRequired: 100,
   CardPrice: 10,
   TableMultiplier: 1,
-  PurchaseMultiplierScale: 2,
   MinimumCardsPurchased: 5,
   MaxCardsPurchased: 20,
-  EventInterval: 5,
   Active: true,
 };
 
@@ -90,9 +88,7 @@ describe('GambitTableService', () => {
       const Dto: CreateGambitTableDto = {
         Name: 'High Stakes Gambit',
         CardPrice: 10,
-        PurchaseMultiplierScale: 2,
         MinimumCardsPurchased: 5,
-        EventInterval: 5,
       };
       tableRepo.create.mockReturnValue(MockTable);
       tableRepo.save.mockResolvedValue(MockTable);
@@ -162,7 +158,6 @@ describe('GambitTableService', () => {
 
       expect(tableRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          EventInterval: MockTable.EventInterval,
           CardPrice: MockTable.CardPrice,
           TableMultiplier: MockTable.TableMultiplier,
         })

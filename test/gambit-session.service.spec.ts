@@ -10,6 +10,10 @@ import { GambitTable } from '../src/modules/gambit/domain/gambit-table.entity';
 import { User } from '../src/modules/auth/domain/user.entity';
 import { CreateGambitSessionDto } from '../src/modules/gambit/sessions/domain/dto/create-gambit-session.dto';
 import { UpdateGambitSessionDto } from '../src/modules/gambit/sessions/domain/dto/update-gambit-session.dto';
+import {
+  FIRST_EVENT_RANGE,
+  SECOND_EVENT_RANGE,
+} from '../src/modules/gambit/gambit.constants';
 
 type GambitSessionRepoMock = {
   create: jest.MockedFunction<
@@ -31,6 +35,9 @@ const MockSession: GambitSession = {
   GambitTableId: 1,
   CardsPurchased: 10,
   ManualFlipsCount: 0,
+  FirstEventFlip: 7,
+  SecondEventFlip: 14,
+  BurnSlotsAvailable: 10,
   CurrentGridSnapshot: null,
   AccumulatedPoints: 0,
   Status: GambitSessionStatus.InProgress,
@@ -81,13 +88,28 @@ describe('GambitSessionService', () => {
 
       const Result = await service.Create(1, Dto, 'user-uuid-123');
 
-      expect(repo.create).toHaveBeenCalledWith({
-        ...Dto,
-        GambitTableId: 1,
-        UserId: 'user-uuid-123',
-        Status: GambitSessionStatus.InProgress,
-      });
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...Dto,
+          GambitTableId: 1,
+          UserId: 'user-uuid-123',
+          Status: GambitSessionStatus.InProgress,
+          BurnSlotsAvailable: Dto.CardsPurchased,
+        })
+      );
+      const CallArg = repo.create.mock.calls[0][0] as GambitSession;
+      expect(CallArg.FirstEventFlip).toBeGreaterThanOrEqual(
+        FIRST_EVENT_RANGE.MIN
+      );
+      expect(CallArg.FirstEventFlip).toBeLessThanOrEqual(FIRST_EVENT_RANGE.MAX);
+      expect(CallArg.SecondEventFlip).toBeGreaterThanOrEqual(
+        SECOND_EVENT_RANGE.MIN
+      );
+      expect(CallArg.SecondEventFlip).toBeLessThanOrEqual(
+        SECOND_EVENT_RANGE.MAX
+      );
       expect(Result.Status).toBe(GambitSessionStatus.InProgress);
+      expect(Result.BurnSlotsAvailable).toBe(Dto.CardsPurchased);
     });
   });
 
