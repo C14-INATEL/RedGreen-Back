@@ -44,6 +44,20 @@ export class GambitSessionResponseDto {
   ManualFlipsCount: number;
 
   @ApiProperty({
+    example: 7,
+    description:
+      'The exact flip number at which the first event will trigger. Randomly determined between 5 and 9 at session creation.',
+  })
+  FirstEventFlip: number;
+
+  @ApiProperty({
+    example: 14,
+    description:
+      'The exact flip number at which the second event will trigger. Randomly determined between 13 and 17 at session creation.',
+  })
+  SecondEventFlip: number;
+
+  @ApiProperty({
     example: 10,
     description:
       'Number of burn slots available for the player. Starts equal to CardsPurchased and can be modified by card effects during the session.',
