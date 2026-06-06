@@ -1,6 +1,35 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { GambitCard } from '../types/gambit-session.types';
 
+export class PendingInteractionDto {
+  @ApiProperty({
+    enum: GambitCard,
+    enumName: 'GambitCard',
+    description: 'The effect card that triggered this interaction',
+  })
+  Effect: GambitCard;
+
+  @ApiProperty({
+    example: 'SELECT_CARD',
+    enum: ['SELECT_CARD', 'SELECT_MULTIPLE_CARDS'],
+    description: 'The type of selection action required from the player',
+  })
+  Action: 'SELECT_CARD' | 'SELECT_MULTIPLE_CARDS';
+
+  @ApiProperty({
+    example: 1,
+    description: 'Number of card positions the player must select',
+  })
+  RequiredSelections: number;
+
+  @ApiProperty({
+    example: [],
+    type: [Number],
+    description: 'Grid positions already selected by the player',
+  })
+  SelectedPositions: number[];
+}
+
 export class GridCardDto {
   @ApiProperty({
     example: 0,
@@ -32,10 +61,10 @@ export class GridCardDto {
 export class PendingEventDto {
   @ApiProperty({
     example: 'Good',
-    enum: ['Good', 'Bad', 'Neutral'],
+    enum: ['Good', 'Bad'],
     description: 'Nature classification of the pending event',
   })
-  EventType: 'Good' | 'Bad' | 'Neutral';
+  EventType: 'Good' | 'Bad';
 
   @ApiProperty({
     type: 'array',
@@ -65,4 +94,12 @@ export class CurrentGridSnapshotDto {
     description: 'Active pending event, or null if no event is in progress',
   })
   PendingEvent: PendingEventDto | null;
+
+  @ApiProperty({
+    type: () => PendingInteractionDto,
+    nullable: true,
+    description:
+      'Active pending interaction requiring player input, or null if none',
+  })
+  PendingInteraction: PendingInteractionDto | null;
 }

@@ -44,6 +44,13 @@ export class GambitSessionResponseDto {
   ManualFlipsCount: number;
 
   @ApiProperty({
+    example: 10,
+    description:
+      'Number of burn slots available for the player. Starts equal to CardsPurchased and can be modified by card effects during the session.',
+  })
+  BurnSlotsAvailable: number;
+
+  @ApiProperty({
     example: 150,
     description:
       'Raw points accumulated during the session. Can be negative, zero, or positive. The final reward in chips is calculated at session end by applying the table multipliers to this value.',

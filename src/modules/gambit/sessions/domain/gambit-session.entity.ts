@@ -69,6 +69,14 @@ export class GambitSession {
   ManualFlipsCount: number;
 
   @ApiProperty({
+    example: 10,
+    description:
+      'Number of burns(plays) available for the player. Starts equal to CardsPurchased and can be modified by card effects during the session.',
+  })
+  @Column({ type: 'int' })
+  BurnSlotsAvailable: number;
+
+  @ApiProperty({
     type: () => CurrentGridSnapshotDto,
     nullable: true,
     description:
