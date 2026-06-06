@@ -40,13 +40,6 @@ export class GambitTableResponseDto {
   TableMultiplier: number;
 
   @ApiProperty({
-    example: 2,
-    description:
-      'Scale factor applied to multipliers when purchasing more cards',
-  })
-  PurchaseMultiplierScale: number;
-
-  @ApiProperty({
     example: 5,
     description: 'Minimum number of cards that must be purchased',
   })
@@ -57,12 +50,6 @@ export class GambitTableResponseDto {
     description: 'Maximum number of cards that can be purchased',
   })
   MaxCardsPurchased: number;
-
-  @ApiProperty({
-    example: 5,
-    description: 'Number of card flips between event triggers',
-  })
-  EventInterval: number;
 
   @ApiProperty({
     example: true,

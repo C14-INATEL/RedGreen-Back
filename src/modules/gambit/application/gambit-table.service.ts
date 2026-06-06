@@ -52,14 +52,10 @@ export class GambitTableService {
     if (DTO.CardPrice !== undefined) GambitTable.CardPrice = DTO.CardPrice;
     if (DTO.TableMultiplier !== undefined)
       GambitTable.TableMultiplier = DTO.TableMultiplier;
-    if (DTO.PurchaseMultiplierScale !== undefined)
-      GambitTable.PurchaseMultiplierScale = DTO.PurchaseMultiplierScale;
     if (DTO.MinimumCardsPurchased !== undefined)
       GambitTable.MinimumCardsPurchased = DTO.MinimumCardsPurchased;
     if (DTO.MaxCardsPurchased !== undefined)
       GambitTable.MaxCardsPurchased = DTO.MaxCardsPurchased;
-    if (DTO.EventInterval !== undefined)
-      GambitTable.EventInterval = DTO.EventInterval;
 
     return this.GambitTableRepo.save(GambitTable);
   }

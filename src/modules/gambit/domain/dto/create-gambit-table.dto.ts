@@ -22,7 +22,7 @@ export class CreateGambitTableDto {
   })
   @IsOptional()
   @IsString()
-  Description: string;
+  Description?: string;
 
   @ApiPropertyOptional({
     example: 100,
@@ -31,7 +31,7 @@ export class CreateGambitTableDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  MinimumChipsRequired: number;
+  MinimumChipsRequired?: number;
 
   @ApiProperty({
     example: 10,
@@ -49,16 +49,7 @@ export class CreateGambitTableDto {
   @IsOptional()
   @IsNumber()
   @Min(1)
-  TableMultiplier: number;
-
-  @ApiProperty({
-    example: 2,
-    description:
-      'Scale factor applied to the score multipliers when purchasing more cards',
-  })
-  @IsNumber()
-  @Min(0)
-  PurchaseMultiplierScale: number;
+  TableMultiplier?: number;
 
   @ApiProperty({
     example: 5,
@@ -75,13 +66,5 @@ export class CreateGambitTableDto {
   @IsOptional()
   @IsNumber()
   @Min(1)
-  MaxCardsPurchased: number;
-
-  @ApiProperty({
-    example: 5,
-    description: 'Number of card flips between event triggers',
-  })
-  @IsNumber()
-  @Min(1)
-  EventInterval: number;
+  MaxCardsPurchased?: number;
 }
