@@ -42,20 +42,20 @@ export const GambitCardConfig: Record<GambitCard, GambitCardDefinition> = {
     value: 2,
   },
   [GambitCard.MELANCIDIO]: { nature: 'Bad', effect: 'DIVIDE', value: 2 },
-  [GambitCard.CLARIVIDENCIA]: { nature: 'Neutral', effect: 'REVEAL' },
+  [GambitCard.CLARIVIDENCIA]: { nature: 'Good', effect: 'REVEAL' },
   [GambitCard.INVERSAO_GRAVITACIONAL]: { nature: 'Neutral', effect: 'INVERT' },
   [GambitCard.JONAS_JOKER]: { nature: 'Neutral', effect: 'RANDOM_CHIPS' },
-  [GambitCard.CORINGA_DO_INATEL]: { nature: 'Bad', effect: 'RESET_POINTS' },
-  [GambitCard.ANULACAO_TOTAL]: {
-    nature: 'Neutral',
-    effect: 'CANCEL_NEXT_BURN',
-  },
+  [GambitCard.CORINGA_DO_INATEL]: { nature: 'Neutral', effect: 'RESET_POINTS' },
+  [GambitCard.ANULACAO_TOTAL]: { nature: 'Good', effect: 'CANCEL_NEXT_BURN' },
   [GambitCard.QUANTO_MENOS_MELHOR]: {
-    nature: 'Bad',
+    nature: 'Neutral',
     effect: 'REMOVE_BURN_SLOT',
   },
-  [GambitCard.QUANTO_MAIS_MELHOR]: { nature: 'Good', effect: 'ADD_BURN_SLOT' },
-  [GambitCard.MENTE_LISA]: { nature: 'Good', effect: 'LOCK_GOOD_CARD' },
+  [GambitCard.QUANTO_MAIS_MELHOR]: {
+    nature: 'Neutral',
+    effect: 'ADD_BURN_SLOT',
+  },
+  [GambitCard.MENTE_LISA]: { nature: 'Bad', effect: 'LOCK_GOOD_CARD' },
   [GambitCard.MOSCA_JOKER]: { nature: 'Neutral', effect: 'TRANSFORM_CARD' },
   [GambitCard.CABECINHA]: { nature: 'Good', effect: 'PEEK_CARDS' },
 };
@@ -155,12 +155,20 @@ export type GridPosition = {
 };
 
 export type PendingEvent = {
-  EventType: 'Good' | 'Bad' | 'Neutral';
+  EventType: 'Good' | 'Bad';
   CardsOffered: [GambitCard, GambitCard, GambitCard];
+};
+
+export type PendingInteraction = {
+  Effect: GambitCard;
+  Action: 'SELECT_CARD' | 'SELECT_MULTIPLE_CARDS';
+  RequiredSelections: number;
+  SelectedPositions: number[];
 };
 
 export type CurrentGridSnapshot = {
   Unrevealed: GridPosition[];
   Revealed: GridPosition[];
   PendingEvent: PendingEvent | null;
+  PendingInteraction: PendingInteraction | null;
 };
