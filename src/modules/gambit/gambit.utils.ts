@@ -7,21 +7,21 @@ import {
   EXP3,
 } from './gambit.constants';
 
-export function calcMultiplier(
-  cardsPurchased: number,
-  tableMultiplier: number
+export function CalcMultiplier(
+  CardsPurchased: number,
+  TableMultiplier: number
 ): number {
-  const seg1Ceil = 1 + (BASE_SEG1_CEIL - 1) * tableMultiplier;
-  const seg2Ceil = 1 + (BASE_SEG2_CEIL - 1) * tableMultiplier;
-  const seg3Ceil = 1 + (BASE_SEG3_CEIL - 1) * tableMultiplier;
+  const Seg1Ceil = 1 + (BASE_SEG1_CEIL - 1) * TableMultiplier;
+  const Seg2Ceil = 1 + (BASE_SEG2_CEIL - 1) * TableMultiplier;
+  const Seg3Ceil = 1 + (BASE_SEG3_CEIL - 1) * TableMultiplier;
 
-  if (cardsPurchased <= 5) {
-    return 1 + (seg1Ceil - 1) * Math.pow(cardsPurchased / 5, EXP1);
-  } else if (cardsPurchased <= 15) {
-    const t = (cardsPurchased - 5) / 10;
-    return seg1Ceil + (seg2Ceil - seg1Ceil) * Math.pow(t, EXP2);
+  if (CardsPurchased <= 5) {
+    return 1 + (Seg1Ceil - 1) * Math.pow(CardsPurchased / 5, EXP1);
+  } else if (CardsPurchased <= 15) {
+    const T = (CardsPurchased - 5) / 10;
+    return Seg1Ceil + (Seg2Ceil - Seg1Ceil) * Math.pow(T, EXP2);
   } else {
-    const t = (cardsPurchased - 15) / 5;
-    return seg2Ceil + (seg3Ceil - seg2Ceil) * Math.pow(t, EXP3);
+    const T = (CardsPurchased - 15) / 5;
+    return Seg2Ceil + (Seg3Ceil - Seg2Ceil) * Math.pow(T, EXP3);
   }
 }
