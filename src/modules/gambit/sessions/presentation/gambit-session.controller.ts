@@ -50,6 +50,7 @@ export class GambitSessionController {
   }
 
   @Get()
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'Get all gambit sessions for a gambit table' })
   @ApiOkResponse({ type: GambitSessionResponseDto, isArray: true })
   async FindAll(
