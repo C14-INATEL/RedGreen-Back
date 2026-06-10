@@ -20,7 +20,7 @@ export class CreateSlotMachineDto {
   Name: string;
 
   @ApiProperty({
-    example: 'A machine with high prizes and 3 rerolls',
+    example: 'A machine with high prizes',
     description:
       'Description of the theme or special features of the slot machine',
     required: false,
@@ -59,16 +59,6 @@ export class CreateSlotMachineDto {
   @IsNumber()
   @Min(0)
   MinimumRerollValue: number;
-
-  @ApiProperty({
-    example: 5,
-    description: 'Maximum rerolls on this machine',
-    required: false,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(3)
-  MaxRerolls: number;
 
   @ApiProperty({
     example: true,
