@@ -4,13 +4,9 @@ import { GambitTable } from './domain/gambit-table.entity';
 import { GambitSession } from './sessions/domain/gambit-session.entity';
 import { GambitTableService } from './application/gambit-table.service';
 import { GambitTableController } from './presentation/gambit-table.controller';
-import { GambitSessionModule } from './sessions/gambit-session.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([GambitTable, GambitSession]),
-    GambitSessionModule,
-  ],
+  imports: [TypeOrmModule.forFeature([GambitTable, GambitSession])],
   providers: [GambitTableService],
   controllers: [GambitTableController],
   exports: [GambitTableService],
