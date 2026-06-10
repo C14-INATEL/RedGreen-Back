@@ -45,12 +45,6 @@ export class SlotMachineResponseDto {
   MinimumRerollValue: number | null;
 
   @ApiProperty({
-    example: 5,
-    description: 'Maximum rerolls allowed on this machine',
-  })
-  MaxRerolls: number;
-
-  @ApiProperty({
     example: true,
     description: 'Whether the slot machine is active or inactive',
   })

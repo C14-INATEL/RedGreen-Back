@@ -515,7 +515,6 @@ describe('SlotSessionService', () => {
       MinimumSpinValue: 10,
       MinimumChipsRequired: 0,
       MinimumRerollValue: 5,
-      MaxRerolls: 5,
       Active: true,
     };
 
@@ -524,7 +523,7 @@ describe('SlotSessionService', () => {
       SlotSessionId: 1,
       UserId: 'user1',
       SlotMachineId: 1,
-      Status: SlotSessionStatus.Active,
+      Status: SlotSessionStatus.InProgress,
       StartedAt: new Date(),
       LastInteractionAt: new Date(),
       EndedAt: null,
@@ -558,7 +557,7 @@ describe('SlotSessionService', () => {
         SlotSessionId: 2,
         UserId: 'user1',
         SlotMachineId: 1,
-        Status: SlotSessionStatus.Active,
+        Status: SlotSessionStatus.InProgress,
         CurrentRewardSnapshot: 5,
       } as unknown as SlotSession;
 
@@ -611,7 +610,6 @@ describe('SlotSessionService', () => {
       MinimumSpinValue: 10,
       MinimumChipsRequired: 0,
       MinimumRerollValue: 5,
-      MaxRerolls: 5,
       Active: true,
     };
 
@@ -619,7 +617,7 @@ describe('SlotSessionService', () => {
       SlotSessionId: 1,
       UserId: 'user1',
       SlotMachineId: 1,
-      Status: SlotSessionStatus.Active,
+      Status: SlotSessionStatus.InProgress,
       StartedAt: new Date(),
       LastInteractionAt: new Date(),
       EndedAt: null,
@@ -679,7 +677,7 @@ describe('SlotSessionService', () => {
     it('should throw error when session is not active', async () => {
       const InactiveSession = {
         ...MockSession,
-        Status: SlotSessionStatus.Ended,
+        Status: SlotSessionStatus.Finished,
       } as unknown as SlotSession;
 
       MockSlotMachineService.FindOne.mockResolvedValue(MockSlotMachine);
@@ -782,7 +780,7 @@ describe('SlotSessionService', () => {
         SlotSessionId: SessionId,
         SlotMachineId: SlotMachineId,
         UserId: UserId,
-        Status: SlotSessionStatus.Active,
+        Status: SlotSessionStatus.InProgress,
         CurrentRewardSnapshot: 42,
         StartedAt: new Date(),
         LastInteractionAt: new Date(),
@@ -813,7 +811,7 @@ describe('SlotSessionService', () => {
 
       const SavedSession = MockCashOutRepo.save.mock.calls[0][0];
       expect(SavedSession.SlotSessionId).toBe(SessionId);
-      expect(SavedSession.Status).toBe(SlotSessionStatus.Ended);
+      expect(SavedSession.Status).toBe(SlotSessionStatus.CashedOut);
       expect(SavedSession.EndedAt).toBeInstanceOf(Date);
       expect(MockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
       expect(MockQueryRunner.rollbackTransaction).not.toHaveBeenCalled();
@@ -826,7 +824,7 @@ describe('SlotSessionService', () => {
 
     it('should rollback transaction when session is not active', async () => {
       const EndedSession = BuildActiveSession({
-        Status: SlotSessionStatus.Ended,
+        Status: SlotSessionStatus.CashedOut,
       });
       MockCashOutRepo.findOne.mockResolvedValue(EndedSession);
 
