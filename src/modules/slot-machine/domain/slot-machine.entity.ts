@@ -14,16 +14,16 @@ export class SlotMachine {
   Name: string;
 
   @Column({ nullable: true })
-  Description: string;
+  Description: string | null;
 
   @Column({ nullable: true })
-  MinimumSpinValue: number;
+  MinimumSpinValue: number | null;
 
   @Column({ nullable: true })
-  MinimumChipsRequired: number;
+  MinimumChipsRequired: number | null;
 
   @Column({ nullable: true })
-  MinimumRerollValue: number;
+  MinimumRerollValue: number | null;
 
   @Column({ default: true })
   Active: boolean;

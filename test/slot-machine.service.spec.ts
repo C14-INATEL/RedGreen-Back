@@ -33,7 +33,6 @@ const BuildMachine = (overrides: Partial<SlotMachine> = {}): SlotMachine => ({
   MinimumSpinValue: null,
   MinimumChipsRequired: null,
   MinimumRerollValue: null,
-  MaxRerolls: 5,
   Active: true,
   TableColor: SlotMachineColor.White,
   ...overrides,
