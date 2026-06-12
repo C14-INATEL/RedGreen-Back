@@ -76,6 +76,9 @@ Thumbs.db
 *.jar
 target/
 
+# Private keys / certificates (e.g. jenkins-key.pem)
+*.pem
+
 # Docker (local volumes and caches, if applicable)
 # Note: Docker volumes are not committed, but if you have local docker data
 # docker-data/
