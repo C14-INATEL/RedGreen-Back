@@ -22,6 +22,8 @@ import { GambitModule } from './modules/gambit/gambit.module';
         const username = Config.get<string>('POSTGRES_USER');
         const password = Config.get<string>('POSTGRES_PASSWORD');
         const database = Config.get<string>('POSTGRES_DB');
+        const sslEnabled =
+          Config.get<string>('POSTGRES_SSL', 'false') === 'true';
 
         if (!username || !password || !database) {
           throw new Error(
@@ -43,6 +45,12 @@ import { GambitModule } from './modules/gambit/gambit.module';
           autoLoadEntities: true,
           synchronize: true,
           logging: true,
+          ssl: sslEnabled ? { rejectUnauthorized: false } : false,
+          extra: {
+            max: 5,
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 30000,
+          },
         };
       },
     }),
