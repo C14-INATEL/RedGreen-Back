@@ -161,6 +161,8 @@ describe('Criterion 2 – concurrent session-start: 23505 becomes ConflictExcept
 
     managerMock.findOne.mockImplementation((entity: unknown) => {
       if (entity === GambitTable) return Promise.resolve(MockActiveGambitTable);
+      if (entity === User)
+        return Promise.resolve({ UserId: 'user-1', ChipBalance: 1000 } as User);
       return Promise.resolve(null);
     });
 
