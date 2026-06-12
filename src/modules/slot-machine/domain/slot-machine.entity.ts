@@ -10,19 +10,19 @@ export class SlotMachine {
   @PrimaryGeneratedColumn()
   SlotMachineId: number;
 
-  @Column()
+  @Column({ type: 'varchar' })
   Name: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   Description: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   MinimumSpinValue: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   MinimumChipsRequired: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   MinimumRerollValue: number | null;
 
   @Column({ default: true })
