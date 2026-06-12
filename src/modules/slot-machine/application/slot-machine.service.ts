@@ -1,10 +1,10 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, IsNull, Repository } from 'typeorm';
 import { SlotMachine } from '../domain/slot-machine.entity';
 import { CreateSlotMachineDto } from '../domain/dto/create-slot-machine.dto';
 import { UpdateSlotMachineDto } from '../domain/dto/update-slot-machine.dto';
@@ -12,6 +12,8 @@ import {
   SlotSession,
   SlotSessionStatus,
 } from '../sessions/domain/slot-session.entity';
+import { User } from '../../auth/domain/user.entity';
+import { SessionRegistryService } from '../../sessions/application/session-registry.service';
 
 @Injectable()
 export class SlotMachineService {
@@ -19,7 +21,9 @@ export class SlotMachineService {
     @InjectRepository(SlotMachine)
     private readonly SlotMachineRepo: Repository<SlotMachine>,
     @InjectRepository(SlotSession)
-    private readonly SlotSessionRepo: Repository<SlotSession>
+    private readonly SlotSessionRepo: Repository<SlotSession>,
+    private readonly dataSource: DataSource,
+    private readonly sessionRegistryService: SessionRegistryService
   ) {}
 
   async Create(DTO: CreateSlotMachineDto): Promise<SlotMachine> {
@@ -85,5 +89,81 @@ export class SlotMachineService {
     }
 
     await this.SlotMachineRepo.remove(SlotMachine);
+  }
+
+  async FindActiveSessions(Id: number): Promise<SlotSession[]> {
+    await this.FindOne(Id);
+    return this.SlotSessionRepo.find({
+      where: {
+        SlotMachineId: Id,
+        Status: SlotSessionStatus.InProgress,
+        DeletedAt: IsNull(),
+      },
+      relations: { User: true },
+    });
+  }
+
+  async AdminDeactivate(
+    Id: number
+  ): Promise<{ ClosedSessions: number; ChipsReturned: number }> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const manager = queryRunner.manager;
+
+      const FoundMachine = await manager.findOne(SlotMachine, {
+        where: { SlotMachineId: Id },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!FoundMachine) {
+        throw new NotFoundException(`SlotMachine with ID ${Id} not found`);
+      }
+
+      FoundMachine.Active = false;
+      await manager.save(SlotMachine, FoundMachine);
+
+      const ActiveSessions = await manager.find(SlotSession, {
+        where: {
+          SlotMachineId: Id,
+          Status: SlotSessionStatus.InProgress,
+          DeletedAt: IsNull(),
+        },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      let ChipsReturned = 0;
+      const Now = new Date();
+
+      for (const Session of ActiveSessions) {
+        const Valor = Session.CurrentRewardSnapshot;
+
+        await manager.increment(
+          User,
+          { UserId: Session.UserId },
+          'ChipBalance',
+          Valor
+        );
+
+        Session.Status = SlotSessionStatus.CashedOut;
+        Session.EndedAt = Now;
+        await manager.save(SlotSession, Session);
+
+        await this.sessionRegistryService.release(manager, Session.UserId);
+
+        ChipsReturned += Valor;
+      }
+
+      await queryRunner.commitTransaction();
+
+      return { ClosedSessions: ActiveSessions.length, ChipsReturned };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 }
