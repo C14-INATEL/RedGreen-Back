@@ -8,12 +8,14 @@ import { SlotMachine } from '../domain/slot-machine.entity';
 import { User } from '../../auth/domain/user.entity';
 import { AuthModule } from '../../auth/auth.module';
 import { SlotMachineModule } from '../slot-machine.module';
+import { SessionsModule } from '../../sessions/sessions.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([SlotSession, SlotMachine, User]),
     AuthModule,
     SlotMachineModule,
+    SessionsModule,
   ],
   providers: [SlotSessionService],
   controllers: [SlotSessionController, CurrentSessionController],
