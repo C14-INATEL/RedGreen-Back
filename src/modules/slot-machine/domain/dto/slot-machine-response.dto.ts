@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { SlotMachineColor } from '../enums/slot-machine-color.enum';
 
 export class SlotMachineResponseDto {
   @ApiProperty({
@@ -48,4 +49,11 @@ export class SlotMachineResponseDto {
     description: 'Whether the slot machine is active or inactive',
   })
   Active: boolean;
+
+  @ApiProperty({
+    example: SlotMachineColor.White,
+    description: 'Color theme of the slot machine',
+    enum: SlotMachineColor,
+  })
+  TableColor: SlotMachineColor;
 }

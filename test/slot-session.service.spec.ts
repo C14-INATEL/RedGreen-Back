@@ -11,6 +11,7 @@ import type { SpinReelResult } from '../src/modules/slot-machine/sessions/domain
 import { AuthService } from '../src/modules/auth/application/auth.service';
 import { SlotMachineService } from '../src/modules/slot-machine/application/slot-machine.service';
 import { SlotMachine } from '../src/modules/slot-machine/domain/slot-machine.entity';
+import { SlotMachineColor } from '../src/modules/slot-machine/domain/enums/slot-machine-color.enum';
 import { CreateSlotSessionDto } from '../src/modules/slot-machine/sessions/domain/dto/create-slot-session.dto';
 import { BadRequestException } from '@nestjs/common';
 
@@ -516,6 +517,7 @@ describe('SlotSessionService', () => {
       MinimumChipsRequired: 0,
       MinimumRerollValue: 5,
       Active: true,
+      TableColor: SlotMachineColor.White,
     };
 
     const MockUserBalance = { ChipBalance: 100 };
@@ -611,6 +613,7 @@ describe('SlotSessionService', () => {
       MinimumChipsRequired: 0,
       MinimumRerollValue: 5,
       Active: true,
+      TableColor: SlotMachineColor.White,
     };
 
     const MockSession = {

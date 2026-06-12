@@ -4,8 +4,10 @@ import {
   IsNotEmpty,
   IsOptional,
   IsNumber,
+  IsEnum,
   Min,
 } from 'class-validator';
+import { SlotMachineColor } from '../enums/slot-machine-color.enum';
 
 export class CreateSlotMachineDto {
   @ApiProperty({
@@ -56,4 +58,14 @@ export class CreateSlotMachineDto {
   @IsNumber()
   @Min(0)
   MinimumRerollValue: number;
+
+  @ApiProperty({
+    example: SlotMachineColor.White,
+    description: 'Color theme of the table',
+    enum: SlotMachineColor,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(SlotMachineColor)
+  TableColor: SlotMachineColor;
 }
