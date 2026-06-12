@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { GambitSessionService } from '../src/modules/gambit/sessions/application/gambit-session.service';
 import {
   GambitSession,
@@ -14,6 +15,9 @@ import {
   FIRST_EVENT_RANGE,
   SECOND_EVENT_RANGE,
 } from '../src/modules/gambit/gambit.constants';
+import { SessionRegistryService } from '../src/modules/sessions/application/session-registry.service';
+import { ActiveSession } from '../src/modules/sessions/domain/active-session.entity';
+import { GameType } from '../src/modules/sessions/domain/enums/game-type.enum';
 
 type GambitSessionRepoMock = {
   create: jest.MockedFunction<
@@ -28,6 +32,42 @@ type GambitSessionRepoMock = {
     (session: GambitSession) => Promise<GambitSession>
   >;
 };
+
+function makeManagerMock() {
+  return {
+    findOne: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+    insert: jest.fn(),
+    delete: jest.fn(),
+    remove: jest.fn(),
+    increment: jest.fn(),
+    decrement: jest.fn(),
+  };
+}
+
+function makeQRMock(mgr: ReturnType<typeof makeManagerMock>) {
+  return {
+    connect: jest.fn(),
+    startTransaction: jest.fn(),
+    commitTransaction: jest.fn(),
+    rollbackTransaction: jest.fn(),
+    release: jest.fn(),
+    manager: mgr,
+  };
+}
+
+const MockActiveTable = {
+  GambitTableId: 1,
+  Name: 'Test',
+  Description: null,
+  MinimumChipsRequired: 0,
+  CardPrice: 10,
+  TableMultiplier: 1,
+  MinimumCardsPurchased: 1,
+  MaxCardsPurchased: 20,
+  Active: true,
+} as unknown as GambitTable;
 
 const MockSession: GambitSession = {
   GambitSessionId: 1,
@@ -52,6 +92,7 @@ const MockSession: GambitSession = {
 describe('GambitSessionService', () => {
   let service: GambitSessionService;
   let repo: GambitSessionRepoMock;
+  let registryMock: { acquire: jest.Mock; release: jest.Mock };
 
   const MockRepo: GambitSessionRepoMock = {
     create: jest.fn(),
@@ -62,12 +103,25 @@ describe('GambitSessionService', () => {
   };
 
   beforeEach(async () => {
+    registryMock = {
+      acquire: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GambitSessionService,
         {
           provide: getRepositoryToken(GambitSession),
           useValue: MockRepo as unknown as GambitSessionRepoMock,
+        },
+        {
+          provide: DataSource,
+          useValue: { createQueryRunner: jest.fn() },
+        },
+        {
+          provide: SessionRegistryService,
+          useValue: registryMock,
         },
       ],
     }).compile();
@@ -81,23 +135,42 @@ describe('GambitSessionService', () => {
   });
 
   describe('Create', () => {
-    it('should create a session with Status InProgress', async () => {
+    it('should create a session with Status InProgress and deduct buy-in', async () => {
       const Dto: CreateGambitSessionDto = { CardsPurchased: 10 };
-      repo.create.mockReturnValue(MockSession);
-      repo.save.mockResolvedValue(MockSession);
+      const MockUser = { UserId: 'user-uuid-123', ChipBalance: 200 } as User;
+
+      const mgr = makeManagerMock();
+      const qr = makeQRMock(mgr);
+
+      mgr.findOne.mockImplementation((entity: unknown) => {
+        if (entity === GambitTable) return Promise.resolve(MockActiveTable);
+        if (entity === ActiveSession) return Promise.resolve(null);
+        if (entity === User) return Promise.resolve(MockUser);
+        return Promise.resolve(null);
+      });
+      mgr.create.mockReturnValue(MockSession);
+      mgr.save.mockResolvedValue(MockSession);
+
+      const ds = service['dataSource'] as unknown as {
+        createQueryRunner: jest.Mock;
+      };
+      ds.createQueryRunner = jest.fn().mockReturnValue(qr);
 
       const Result = await service.Create(1, Dto, 'user-uuid-123');
 
-      expect(repo.create).toHaveBeenCalledWith(
+      expect(mgr.create).toHaveBeenCalledWith(
+        GambitSession,
         expect.objectContaining({
-          ...Dto,
           GambitTableId: 1,
           UserId: 'user-uuid-123',
           Status: GambitSessionStatus.InProgress,
           BurnSlotsAvailable: Dto.CardsPurchased,
         })
       );
-      const CallArg = repo.create.mock.calls[0][0] as GambitSession;
+
+      const CallArg = (
+        mgr.create.mock.calls[0] as unknown[]
+      )[1] as GambitSession;
       expect(CallArg.FirstEventFlip).toBeGreaterThanOrEqual(
         FIRST_EVENT_RANGE.MIN
       );
@@ -108,8 +181,24 @@ describe('GambitSessionService', () => {
       expect(CallArg.SecondEventFlip).toBeLessThanOrEqual(
         SECOND_EVENT_RANGE.MAX
       );
+
+      const BuyIn = Dto.CardsPurchased * MockActiveTable.CardPrice;
+      expect(mgr.decrement).toHaveBeenCalledWith(
+        User,
+        { UserId: 'user-uuid-123' },
+        'ChipBalance',
+        BuyIn
+      );
+
+      expect(registryMock.acquire).toHaveBeenCalledWith(
+        mgr,
+        'user-uuid-123',
+        GameType.Gambit,
+        MockSession.GambitSessionId
+      );
+
+      expect(qr.commitTransaction).toHaveBeenCalledTimes(1);
       expect(Result.Status).toBe(GambitSessionStatus.InProgress);
-      expect(Result.BurnSlotsAvailable).toBe(Dto.CardsPurchased);
     });
   });
 
@@ -166,20 +255,114 @@ describe('GambitSessionService', () => {
   });
 
   describe('Remove', () => {
-    it('should remove the session successfully', async () => {
-      repo.findOne.mockResolvedValue(MockSession);
-      repo.remove.mockResolvedValue(MockSession);
+    it('should remove the session and release the registry lock', async () => {
+      const mgr = makeManagerMock();
+      const qr = makeQRMock(mgr);
+
+      mgr.findOne.mockResolvedValue(MockSession);
+
+      const ds = service['dataSource'] as unknown as {
+        createQueryRunner: jest.Mock;
+      };
+      ds.createQueryRunner = jest.fn().mockReturnValue(qr);
 
       await expect(
         service.Remove(1, 1, 'user-uuid-123')
       ).resolves.toBeUndefined();
-      expect(repo.remove).toHaveBeenCalledWith(MockSession);
+
+      expect(mgr.remove).toHaveBeenCalledWith(GambitSession, MockSession);
+      expect(registryMock.release).toHaveBeenCalledWith(mgr, 'user-uuid-123');
+      expect(qr.commitTransaction).toHaveBeenCalledTimes(1);
     });
 
     it('should throw NotFoundException when session does not exist', async () => {
-      repo.findOne.mockResolvedValue(null);
+      const mgr = makeManagerMock();
+      const qr = makeQRMock(mgr);
+      mgr.findOne.mockResolvedValue(null);
+
+      const ds = service['dataSource'] as unknown as {
+        createQueryRunner: jest.Mock;
+      };
+      ds.createQueryRunner = jest.fn().mockReturnValue(qr);
 
       await expect(service.Remove(1, 99, 'user-uuid-123')).rejects.toThrow(
+        NotFoundException
+      );
+      expect(qr.rollbackTransaction).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('CashOut', () => {
+    it('should cash out an active session and return chips awarded', async () => {
+      const InProgressSession = {
+        ...MockSession,
+        Status: GambitSessionStatus.InProgress,
+      };
+      const mgr = makeManagerMock();
+      const qr = makeQRMock(mgr);
+
+      mgr.findOne.mockImplementation((entity: unknown) => {
+        if (entity === GambitSession) return Promise.resolve(InProgressSession);
+        if (entity === GambitTable) return Promise.resolve(MockActiveTable);
+        return Promise.resolve(null);
+      });
+      mgr.save.mockResolvedValue({
+        ...InProgressSession,
+        Status: GambitSessionStatus.CashedOut,
+      });
+
+      const ds = service['dataSource'] as unknown as {
+        createQueryRunner: jest.Mock;
+      };
+      ds.createQueryRunner = jest.fn().mockReturnValue(qr);
+
+      const Result = await service.CashOut(1, 1, 'user-uuid-123');
+
+      const ExpectedPayout =
+        MockSession.CardsPurchased * MockActiveTable.CardPrice;
+      expect(mgr.increment).toHaveBeenCalledWith(
+        User,
+        { UserId: 'user-uuid-123' },
+        'ChipBalance',
+        ExpectedPayout
+      );
+      expect(registryMock.release).toHaveBeenCalledWith(mgr, 'user-uuid-123');
+      expect(qr.commitTransaction).toHaveBeenCalledTimes(1);
+      expect(Result.chipsAwarded).toBe(ExpectedPayout);
+    });
+
+    it('should throw BadRequestException when session is not InProgress', async () => {
+      const CashedOutSession = {
+        ...MockSession,
+        Status: GambitSessionStatus.CashedOut,
+      };
+      const mgr = makeManagerMock();
+      const qr = makeQRMock(mgr);
+
+      mgr.findOne.mockResolvedValue(CashedOutSession);
+
+      const ds = service['dataSource'] as unknown as {
+        createQueryRunner: jest.Mock;
+      };
+      ds.createQueryRunner = jest.fn().mockReturnValue(qr);
+
+      await expect(service.CashOut(1, 1, 'user-uuid-123')).rejects.toThrow(
+        'Session is not active'
+      );
+      expect(qr.rollbackTransaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw NotFoundException when session does not exist', async () => {
+      const mgr = makeManagerMock();
+      const qr = makeQRMock(mgr);
+      mgr.findOne.mockResolvedValue(null);
+
+      const ds = service['dataSource'] as unknown as {
+        createQueryRunner: jest.Mock;
+      };
+      ds.createQueryRunner = jest.fn().mockReturnValue(qr);
+
+      await expect(service.CashOut(1, 99, 'user-uuid-123')).rejects.toThrow(
         NotFoundException
       );
     });

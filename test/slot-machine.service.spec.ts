@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { SessionRegistryService } from '../src/modules/sessions/application/session-registry.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
@@ -67,6 +68,14 @@ describe('SlotMachineService', () => {
         {
           provide: getRepositoryToken(SlotSession),
           useValue: MockSlotSessionRepo as unknown as Repository<SlotSession>,
+        },
+        {
+          provide: DataSource,
+          useValue: { createQueryRunner: jest.fn() },
+        },
+        {
+          provide: SessionRegistryService,
+          useValue: { acquire: jest.fn(), release: jest.fn() },
         },
       ],
     }).compile();
