@@ -1,4 +1,5 @@
 import { Check, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { SlotMachineColor } from './enums/slot-machine-color.enum';
 
 @Check(
   'CHK_SlotMachine_NonNegative',
@@ -13,17 +14,24 @@ export class SlotMachine {
   Name: string;
 
   @Column({ nullable: true })
-  Description: string;
+  Description: string | null;
 
   @Column({ nullable: true })
-  MinimumSpinValue: number;
+  MinimumSpinValue: number | null;
 
   @Column({ nullable: true })
-  MinimumChipsRequired: number;
+  MinimumChipsRequired: number | null;
 
   @Column({ nullable: true })
-  MinimumRerollValue: number;
+  MinimumRerollValue: number | null;
 
   @Column({ default: true })
   Active: boolean;
+
+  @Column({
+    type: 'varchar',
+    enum: SlotMachineColor,
+    default: SlotMachineColor.White,
+  })
+  TableColor: SlotMachineColor;
 }
