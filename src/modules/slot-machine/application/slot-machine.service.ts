@@ -59,9 +59,6 @@ export class SlotMachineService {
     if (DTO.MinimumRerollValue !== undefined) {
       SlotMachine.MinimumRerollValue = DTO.MinimumRerollValue;
     }
-    if (DTO.Active !== undefined) {
-      SlotMachine.Active = DTO.Active;
-    }
     if (DTO.TableColor !== undefined) {
       SlotMachine.TableColor = DTO.TableColor;
     }

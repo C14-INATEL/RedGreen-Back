@@ -4,7 +4,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsNumber,
-  IsBoolean,
   IsEnum,
   Min,
 } from 'class-validator';
@@ -59,15 +58,6 @@ export class CreateSlotMachineDto {
   @IsNumber()
   @Min(0)
   MinimumRerollValue: number;
-
-  @ApiProperty({
-    example: true,
-    description: 'Define if the machine is active or inactive',
-    required: false,
-  })
-  @IsOptional()
-  @IsBoolean()
-  Active: boolean;
 
   @ApiProperty({
     example: SlotMachineColor.White,
