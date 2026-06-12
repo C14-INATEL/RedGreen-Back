@@ -14,6 +14,7 @@ import {
 } from '../sessions/domain/gambit-session.entity';
 import { User } from '../../auth/domain/user.entity';
 import { SessionRegistryService } from '../../sessions/application/session-registry.service';
+import { ActiveSessionResponseDto } from '../../sessions/domain/dto/active-session-response.dto';
 
 @Injectable()
 export class GambitTableService {
@@ -81,12 +82,22 @@ export class GambitTableService {
     await this.GambitTableRepo.save(GambitTable);
   }
 
-  async FindActiveSessions(Id: number): Promise<GambitSession[]> {
+  async FindActiveSessions(Id: number): Promise<ActiveSessionResponseDto[]> {
     await this.FindOne(Id);
-    return this.GambitSessionRepo.find({
+    const Sessions = await this.GambitSessionRepo.find({
       where: { GambitTableId: Id, Status: GambitSessionStatus.InProgress },
-      relations: { User: true },
+      relations: { GambitTable: true, User: true },
     });
+    return Sessions.map((s) => ({
+      UserId: s.UserId,
+      Nickname: s.User.Nickname,
+      Status: s.Status,
+      // TODO: Result !== null branch depends on end-of-game scoring not yet implemented
+      PotentialPayout:
+        s.Result !== null
+          ? s.Result
+          : s.CardsPurchased * s.GambitTable.CardPrice,
+    }));
   }
 
   async AdminDeactivate(
@@ -113,7 +124,6 @@ export class GambitTableService {
 
       const ActiveSessions = await manager.find(GambitSession, {
         where: { GambitTableId: Id, Status: GambitSessionStatus.InProgress },
-        relations: { GambitTable: true },
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -121,10 +131,11 @@ export class GambitTableService {
       const Now = new Date();
 
       for (const Session of ActiveSessions) {
+        // TODO: Result !== null branch depends on end-of-game scoring not yet implemented
         const Valor =
           Session.Result !== null
             ? Session.Result
-            : Session.CardsPurchased * Session.GambitTable.CardPrice;
+            : Session.CardsPurchased * FoundTable.CardPrice;
 
         await manager.increment(
           User,

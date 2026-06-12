@@ -14,6 +14,7 @@ import {
 } from '../sessions/domain/slot-session.entity';
 import { User } from '../../auth/domain/user.entity';
 import { SessionRegistryService } from '../../sessions/application/session-registry.service';
+import { ActiveSessionResponseDto } from '../../sessions/domain/dto/active-session-response.dto';
 
 @Injectable()
 export class SlotMachineService {
@@ -94,9 +95,9 @@ export class SlotMachineService {
     await this.SlotMachineRepo.remove(SlotMachine);
   }
 
-  async FindActiveSessions(Id: number): Promise<SlotSession[]> {
+  async FindActiveSessions(Id: number): Promise<ActiveSessionResponseDto[]> {
     await this.FindOne(Id);
-    return this.SlotSessionRepo.find({
+    const Sessions = await this.SlotSessionRepo.find({
       where: {
         SlotMachineId: Id,
         Status: SlotSessionStatus.InProgress,
@@ -104,6 +105,12 @@ export class SlotMachineService {
       },
       relations: { User: true },
     });
+    return Sessions.map((s) => ({
+      UserId: s.UserId,
+      Nickname: s.User.Nickname,
+      Status: s.Status,
+      PotentialPayout: s.CurrentRewardSnapshot,
+    }));
   }
 
   async AdminDeactivate(
