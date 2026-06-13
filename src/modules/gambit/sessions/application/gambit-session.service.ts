@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,12 +9,12 @@ import {
   GambitSession,
   GambitSessionStatus,
 } from '../domain/gambit-session.entity';
+import { GambitTable } from '../../domain/gambit-table.entity';
+import { User } from '../../../auth/domain/user.entity';
 import { CreateGambitSessionDto } from '../domain/dto/create-gambit-session.dto';
 import { UpdateGambitSessionDto } from '../domain/dto/update-gambit-session.dto';
 import { ResolveEventDto } from '../domain/dto/resolve-event.dto';
 import { ResolveEffectDto } from '../domain/dto/resolve-effect.dto';
-import { AuthService } from '../../../auth/application/auth.service';
-import { GambitTableService } from '../../application/gambit-table.service';
 import {
   BOARD_SIZE,
   CARD_POINTS_RANGE,
@@ -25,6 +24,8 @@ import {
   SECOND_EVENT_RANGE,
 } from '../../gambit.constants';
 import { CalcMultiplier } from '../../gambit.utils';
+import { SessionRegistryService } from '../../../sessions/application/session-registry.service';
+import { GameType } from '../../../sessions/domain/enums/game-type.enum';
 import {
   GambitCard,
   GambitCardConfig,
@@ -55,9 +56,10 @@ export class GambitSessionService {
   constructor(
     @InjectRepository(GambitSession)
     private readonly GambitSessionRepo: Repository<GambitSession>,
+    @InjectRepository(GambitTable)
+    private readonly GambitTableRepo: Repository<GambitTable>,
     private readonly dataSource: DataSource,
-    private readonly authService: AuthService,
-    private readonly gambitTableService: GambitTableService
+    private readonly sessionRegistryService: SessionRegistryService
   ) {}
 
   async Create(
@@ -65,81 +67,108 @@ export class GambitSessionService {
     DTO: CreateGambitSessionDto,
     UserId: string
   ): Promise<{ session: GambitSessionView; currentBalance: number }> {
-    const Table = await this.gambitTableService.FindOne(GambitTableId);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!Table.Active) {
-      throw new BadRequestException('This gambit table is not active');
-    }
+    try {
+      const manager = queryRunner.manager;
 
-    const Cards = DTO.CardsPurchased;
-    if (
-      Cards < Table.MinimumCardsPurchased ||
-      Cards > Table.MaxCardsPurchased
-    ) {
-      throw new BadRequestException(
-        `CardsPurchased must be between ${Table.MinimumCardsPurchased} and ${Table.MaxCardsPurchased}`
+      const Table = await manager.findOne(GambitTable, {
+        where: { GambitTableId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!Table) {
+        throw new NotFoundException(
+          `GambitTable with ID ${GambitTableId} not found`
+        );
+      }
+      if (!Table.Active) {
+        throw new BadRequestException('This gambit table is not active');
+      }
+
+      const Cards = DTO.CardsPurchased;
+      if (
+        Cards < Table.MinimumCardsPurchased ||
+        Cards > Table.MaxCardsPurchased
+      ) {
+        throw new BadRequestException(
+          `CardsPurchased must be between ${Table.MinimumCardsPurchased} and ${Table.MaxCardsPurchased}`
+        );
+      }
+
+      const UserEntity = await manager.findOne(User, { where: { UserId } });
+      if (!UserEntity) {
+        throw new NotFoundException('User not found');
+      }
+
+      const Cost = Table.CardPrice * Cards;
+      if (
+        Table.MinimumChipsRequired &&
+        UserEntity.ChipBalance < Table.MinimumChipsRequired
+      ) {
+        throw new BadRequestException(
+          'Insufficient chips to access this table'
+        );
+      }
+      if (UserEntity.ChipBalance < Cost) {
+        throw new BadRequestException(
+          'Insufficient chips to purchase these cards'
+        );
+      }
+
+      const Snapshot: CurrentGridSnapshot = {
+        Unrevealed: this.GenerateBoard(),
+        Revealed: [],
+        PendingEvent: null,
+        PendingInteraction: null,
+        EventsFired: [],
+      };
+
+      const Session = manager.create(GambitSession, {
+        UserId,
+        GambitTableId,
+        CardsPurchased: Cards,
+        BurnSlotsAvailable: Cards,
+        ManualFlipsCount: 0,
+        FirstEventFlip: this.RandomInt(
+          FIRST_EVENT_RANGE.MIN,
+          FIRST_EVENT_RANGE.MAX
+        ),
+        SecondEventFlip: this.RandomInt(
+          SECOND_EVENT_RANGE.MIN,
+          SECOND_EVENT_RANGE.MAX
+        ),
+        AccumulatedPoints: 0,
+        Status: GambitSessionStatus.InProgress,
+        Result: null,
+        NextEffect: null,
+        CurrentGridSnapshot: Snapshot,
+      });
+      const Saved = await manager.save(GambitSession, Session);
+
+      await manager.decrement(User, { UserId }, 'ChipBalance', Cost);
+
+      await this.sessionRegistryService.acquire(
+        manager,
+        UserId,
+        GameType.Gambit,
+        Saved.GambitSessionId
       );
+
+      await queryRunner.commitTransaction();
+
+      return {
+        session: this.ToClientView(Saved),
+        currentBalance: UserEntity.ChipBalance - Cost,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    const OpenSession = await this.FindCurrentSessionEntity(UserId);
-    if (OpenSession) {
-      throw new ConflictException(
-        'You already have an open Gambit session. Finish and cash it out first.'
-      );
-    }
-
-    const Cost = Table.CardPrice * Cards;
-    const Balance = await this.authService.GetChipBalance(UserId);
-    if (
-      Table.MinimumChipsRequired &&
-      Balance.ChipBalance < Table.MinimumChipsRequired
-    ) {
-      throw new BadRequestException('Insufficient chips to access this table');
-    }
-    if (Balance.ChipBalance < Cost) {
-      throw new BadRequestException(
-        'Insufficient chips to purchase these cards'
-      );
-    }
-
-    await this.authService.UpdateChipBalance(UserId, -Cost);
-
-    const Snapshot: CurrentGridSnapshot = {
-      Unrevealed: this.GenerateBoard(),
-      Revealed: [],
-      PendingEvent: null,
-      PendingInteraction: null,
-      EventsFired: [],
-    };
-
-    const Session = this.GambitSessionRepo.create({
-      UserId,
-      GambitTableId,
-      CardsPurchased: Cards,
-      BurnSlotsAvailable: Cards,
-      ManualFlipsCount: 0,
-      FirstEventFlip: this.RandomInt(
-        FIRST_EVENT_RANGE.MIN,
-        FIRST_EVENT_RANGE.MAX
-      ),
-      SecondEventFlip: this.RandomInt(
-        SECOND_EVENT_RANGE.MIN,
-        SECOND_EVENT_RANGE.MAX
-      ),
-      AccumulatedPoints: 0,
-      Status: GambitSessionStatus.InProgress,
-      Result: null,
-      NextEffect: null,
-      CurrentGridSnapshot: Snapshot,
-    });
-
-    const Saved = await this.GambitSessionRepo.save(Session);
-    const FinalBalance = await this.authService.GetChipBalance(UserId);
-
-    return {
-      session: this.ToClientView(Saved),
-      currentBalance: FinalBalance.ChipBalance,
-    };
   }
 
   async GetActiveSessionView(
@@ -322,14 +351,16 @@ export class GambitSessionService {
       throw new NotFoundException('No session to cash out');
     }
 
-    const QueryRunner = this.dataSource.createQueryRunner();
-    await QueryRunner.connect();
-    await QueryRunner.startTransaction();
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
     try {
-      const Repo = QueryRunner.manager.getRepository(GambitSession);
-      const Session = await Repo.findOne({
+      const manager = queryRunner.manager;
+
+      const Session = await manager.findOne(GambitSession, {
         where: { GambitSessionId: Current.GambitSessionId, UserId },
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!Session) {
@@ -341,25 +372,31 @@ export class GambitSessionService {
         );
       }
 
+      const UserEntity = await manager.findOne(User, { where: { UserId } });
+      if (!UserEntity) {
+        throw new NotFoundException('User not found');
+      }
+
       const Reward = Math.max(0, Session.Result ?? 0);
-      await this.authService.UpdateChipBalance(UserId, Reward);
+      await manager.increment(User, { UserId }, 'ChipBalance', Reward);
 
       Session.Status = GambitSessionStatus.CashedOut;
-      await Repo.save(Session);
+      await manager.save(GambitSession, Session);
 
-      await QueryRunner.commitTransaction();
+      await this.sessionRegistryService.release(manager, UserId);
 
-      const Balance = await this.authService.GetChipBalance(UserId);
+      await queryRunner.commitTransaction();
+
       return {
         message: 'Cash out successful',
         reward: Reward,
-        finalBalance: Balance.ChipBalance,
+        finalBalance: UserEntity.ChipBalance + Reward,
       };
     } catch (error) {
-      await QueryRunner.rollbackTransaction();
+      await queryRunner.rollbackTransaction();
       throw error;
     } finally {
-      await QueryRunner.release();
+      await queryRunner.release();
     }
   }
 
@@ -402,8 +439,33 @@ export class GambitSessionService {
     Id: number,
     UserId: string
   ): Promise<void> {
-    const Session = await this.FindOne(GambitTableId, Id, UserId);
-    await this.GambitSessionRepo.remove(Session);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const manager = queryRunner.manager;
+
+      const Session = await manager.findOne(GambitSession, {
+        where: { GambitSessionId: Id, GambitTableId, UserId },
+      });
+
+      if (!Session) {
+        throw new NotFoundException(
+          `GambitSession with ID ${Id} not found for this gambit table and user`
+        );
+      }
+
+      await manager.remove(GambitSession, Session);
+      await this.sessionRegistryService.release(manager, UserId);
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   private ValidateNoBlockingState(Session: GambitSession): void {
@@ -545,12 +607,12 @@ export class GambitSessionService {
       (Session.ManualFlipsCount >= Session.BurnSlotsAvailable ||
         !HasBurnableCard)
     ) {
-      const Table = await this.gambitTableService.FindOne(
-        Session.GambitTableId
-      );
+      const Table = await this.GambitTableRepo.findOne({
+        where: { GambitTableId: Session.GambitTableId },
+      });
       const Multiplier = CalcMultiplier(
         Session.CardsPurchased,
-        Table.TableMultiplier
+        Table?.TableMultiplier ?? 1
       );
       Session.Status = GambitSessionStatus.Finished;
       Session.Result = Math.max(

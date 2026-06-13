@@ -1,17 +1,22 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, IsNull, Repository } from 'typeorm';
 import { SlotSession, SlotSessionStatus } from '../domain/slot-session.entity';
+import { SlotMachine } from '../../domain/slot-machine.entity';
+import { User } from '../../../auth/domain/user.entity';
 import { CreateSlotSessionDto } from '../domain/dto/create-slot-session.dto';
 import { UpdateSlotSessionDto } from '../domain/dto/update-slot-session.dto';
 import { SlotSymbol } from '../domain/enums/slot-symbol.enum';
 import type { SpinReelResult } from '../domain/types/slot-session.types';
 import { AuthService } from '../../../auth/application/auth.service';
-import { SlotMachineService } from '../../application/slot-machine.service';
+import { SessionRegistryService } from '../../../sessions/application/session-registry.service';
+import { GameType } from '../../../sessions/domain/enums/game-type.enum';
+import { ActiveSession } from '../../../sessions/domain/active-session.entity';
 
 @Injectable()
 export class SlotSessionService {
@@ -20,7 +25,7 @@ export class SlotSessionService {
     private readonly slotSessionRepo: Repository<SlotSession>,
     private readonly dataSource: DataSource,
     private readonly authService: AuthService,
-    private readonly slotMachineService: SlotMachineService
+    private readonly sessionRegistryService: SessionRegistryService
   ) {}
 
   async create(
@@ -28,72 +33,100 @@ export class SlotSessionService {
     dto: CreateSlotSessionDto,
     userId: string
   ): Promise<{ session: SlotSession; currentBalance: number }> {
-    const SlotMachine = await this.slotMachineService.FindOne(slotMachineId);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    const ActiveSessionWithChips = await this.slotSessionRepo.findOne({
-      where: {
+    try {
+      const manager = queryRunner.manager;
+
+      const FoundMachine = await manager.findOne(SlotMachine, {
+        where: { SlotMachineId: slotMachineId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!FoundMachine) {
+        throw new NotFoundException(
+          `SlotMachine with ID ${slotMachineId} not found`
+        );
+      }
+
+      if (!FoundMachine.Active) {
+        throw new BadRequestException('This slot machine is not active');
+      }
+
+      const ExistingActive = await manager.findOne(ActiveSession, {
+        where: { UserId: userId },
+      });
+
+      if (ExistingActive) {
+        throw new ConflictException(
+          'Você já está em uma partida. Encerre a mesa atual antes de entrar em outra.'
+        );
+      }
+
+      const UserEntity = await manager.findOne(User, {
+        where: { UserId: userId },
+      });
+
+      if (!UserEntity) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (
+        FoundMachine.MinimumSpinValue &&
+        UserEntity.ChipBalance < FoundMachine.MinimumSpinValue
+      ) {
+        throw new BadRequestException(
+          'Insufficient chips to start a new session'
+        );
+      }
+
+      if (FoundMachine.MinimumSpinValue) {
+        await manager.decrement(
+          User,
+          { UserId: userId },
+          'ChipBalance',
+          FoundMachine.MinimumSpinValue
+        );
+      }
+
+      const Reels = this.generateRandomReels();
+      const Reward = this.calculateReward(Reels);
+
+      const NewSession = manager.create(SlotSession, {
         UserId: userId,
+        SlotMachineId: slotMachineId,
         Status: SlotSessionStatus.InProgress,
-        DeletedAt: IsNull(),
-      },
-    });
+        StartedAt: dto.StartedAt || new Date(),
+        LastInteractionAt: dto.LastInteractionAt || new Date(),
+        EndedAt: dto.EndedAt ?? null,
+        CurrentRewardSnapshot: Reward,
+        CurrentSpinResult: { Reels },
+        CurrentRerollsSpent: { Rerolls: { Max: 5, Used: 0 } },
+      });
+      const SavedSession = await manager.save(SlotSession, NewSession);
 
-    if (
-      ActiveSessionWithChips &&
-      ActiveSessionWithChips.CurrentRewardSnapshot > 0
-    ) {
-      throw new BadRequestException(
-        'Cannot start new session while having chips in any machine. Please cash out first.'
-      );
-    }
-
-    if (ActiveSessionWithChips) {
-      ActiveSessionWithChips.Status = SlotSessionStatus.Finished;
-      ActiveSessionWithChips.EndedAt = new Date();
-      await this.slotSessionRepo.save(ActiveSessionWithChips);
-    }
-
-    const UserBalanceBeforeSpin = await this.authService.GetChipBalance(userId);
-    if (
-      SlotMachine.MinimumSpinValue &&
-      UserBalanceBeforeSpin.ChipBalance < SlotMachine.MinimumSpinValue
-    ) {
-      throw new BadRequestException(
-        'Insufficient chips to start a new session'
-      );
-    }
-
-    if (SlotMachine.MinimumSpinValue) {
-      await this.authService.UpdateChipBalance(
+      await this.sessionRegistryService.acquire(
+        manager,
         userId,
-        -SlotMachine.MinimumSpinValue
+        GameType.Slot,
+        SavedSession.SlotSessionId
       );
+
+      await queryRunner.commitTransaction();
+
+      const FinalBalance = await this.authService.GetChipBalance(userId);
+      return {
+        session: SavedSession,
+        currentBalance: FinalBalance.ChipBalance,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    const Reels = this.generateRandomReels();
-    const Reward = this.calculateReward(Reels);
-
-    const SlotSession = this.slotSessionRepo.create({
-      UserId: userId,
-      SlotMachineId: slotMachineId,
-      Status: SlotSessionStatus.InProgress,
-      StartedAt: dto.StartedAt || new Date(),
-      LastInteractionAt: dto.LastInteractionAt || new Date(),
-      EndedAt: dto.EndedAt ?? null,
-      CurrentRewardSnapshot: Reward,
-      CurrentSpinResult: { Reels },
-      CurrentRerollsSpent: {
-        Rerolls: { Max: 5, Used: 0 },
-      },
-    });
-
-    const SavedSession = await this.slotSessionRepo.save(SlotSession);
-    const FinalBalance = await this.authService.GetChipBalance(userId);
-
-    return {
-      session: SavedSession,
-      currentBalance: FinalBalance.ChipBalance,
-    };
   }
 
   async findAll(slotMachineId: number, userId: string): Promise<SlotSession[]> {
@@ -111,7 +144,7 @@ export class SlotSessionService {
     id: number,
     userId: string
   ): Promise<SlotSession> {
-    const SlotSession = await this.slotSessionRepo.findOne({
+    const Session = await this.slotSessionRepo.findOne({
       where: {
         SlotSessionId: id,
         SlotMachineId: slotMachineId,
@@ -120,13 +153,13 @@ export class SlotSessionService {
       },
     });
 
-    if (!SlotSession) {
+    if (!Session) {
       throw new NotFoundException(
         `SlotSession with Id ${id} not found for this slot machine and user`
       );
     }
 
-    return SlotSession;
+    return Session;
   }
 
   async update(
@@ -135,21 +168,21 @@ export class SlotSessionService {
     dto: UpdateSlotSessionDto,
     userId: string
   ): Promise<SlotSession> {
-    const SlotSession = await this.findOne(slotMachineId, id, userId);
-    Object.assign(SlotSession, dto);
-    return this.slotSessionRepo.save(SlotSession);
+    const Session = await this.findOne(slotMachineId, id, userId);
+    Object.assign(Session, dto);
+    return this.slotSessionRepo.save(Session);
   }
 
   async findActiveSession(userId: string): Promise<SlotSession | null> {
-    const ActiveSession = await this.slotSessionRepo.findOne({
-      where: {
-        UserId: userId,
-        Status: SlotSessionStatus.InProgress,
-        DeletedAt: IsNull(),
-      },
-    });
-
-    return ActiveSession || null;
+    return (
+      (await this.slotSessionRepo.findOne({
+        where: {
+          UserId: userId,
+          Status: SlotSessionStatus.InProgress,
+          DeletedAt: IsNull(),
+        },
+      })) ?? null
+    );
   }
 
   async rerollActive(
@@ -191,70 +224,119 @@ export class SlotSessionService {
     id: number,
     userId: string
   ): Promise<void> {
-    const SlotSession = await this.findOne(slotMachineId, id, userId);
-    SlotSession.DeletedAt = new Date();
-    await this.slotSessionRepo.save(SlotSession);
+    const Session = await this.findOne(slotMachineId, id, userId);
+    Session.DeletedAt = new Date();
+    await this.slotSessionRepo.save(Session);
   }
+
   async reroll(
     slotMachineId: number,
     id: number,
     reelIndex: number,
     userId: string
   ): Promise<{ session: SlotSession; currentBalance: number }> {
-    const SlotMachine = await this.slotMachineService.FindOne(slotMachineId);
-    const SlotSession = await this.findOne(slotMachineId, id, userId);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (SlotSession.Status !== SlotSessionStatus.InProgress) {
-      throw new BadRequestException('Session is not active');
+    try {
+      const manager = queryRunner.manager;
+
+      const Session = await manager.findOne(SlotSession, {
+        where: {
+          SlotSessionId: id,
+          SlotMachineId: slotMachineId,
+          UserId: userId,
+          DeletedAt: IsNull(),
+        },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!Session) {
+        throw new NotFoundException(
+          `SlotSession with Id ${id} not found for this slot machine and user`
+        );
+      }
+
+      if (Session.Status !== SlotSessionStatus.InProgress) {
+        throw new BadRequestException('Session is not active');
+      }
+
+      const FoundMachine = await manager.findOne(SlotMachine, {
+        where: { SlotMachineId: slotMachineId },
+      });
+
+      if (!FoundMachine) {
+        throw new NotFoundException(
+          `SlotMachine with ID ${slotMachineId} not found`
+        );
+      }
+
+      if (!FoundMachine.Active) {
+        throw new BadRequestException('This slot machine is no longer active');
+      }
+
+      if (
+        Session.CurrentRerollsSpent.Rerolls.Used >=
+        Session.CurrentRerollsSpent.Rerolls.Max
+      ) {
+        throw new BadRequestException('No rerolls left');
+      }
+
+      if (
+        reelIndex < 0 ||
+        reelIndex >= Session.CurrentSpinResult.Reels.length
+      ) {
+        throw new BadRequestException('Invalid reel index');
+      }
+
+      const UserEntity = await manager.findOne(User, {
+        where: { UserId: userId },
+      });
+
+      if (!UserEntity) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (
+        FoundMachine.MinimumRerollValue &&
+        UserEntity.ChipBalance < FoundMachine.MinimumRerollValue
+      ) {
+        throw new BadRequestException('Insufficient chips to reroll');
+      }
+
+      if (FoundMachine.MinimumRerollValue) {
+        await manager.decrement(
+          User,
+          { UserId: userId },
+          'ChipBalance',
+          FoundMachine.MinimumRerollValue
+        );
+      }
+
+      const NewSymbol = this.getRandomSymbol();
+      Session.CurrentSpinResult.Reels[reelIndex].SymbolId = NewSymbol;
+
+      const NewReward = this.calculateReward(Session.CurrentSpinResult.Reels);
+      Session.CurrentRewardSnapshot = NewReward;
+      Session.CurrentRerollsSpent.Rerolls.Used += 1;
+      Session.LastInteractionAt = new Date();
+
+      const UpdatedSession = await manager.save(SlotSession, Session);
+
+      await queryRunner.commitTransaction();
+
+      const FinalBalance = await this.authService.GetChipBalance(userId);
+      return {
+        session: UpdatedSession,
+        currentBalance: FinalBalance.ChipBalance,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    if (
-      SlotSession.CurrentRerollsSpent.Rerolls.Used >=
-      SlotSession.CurrentRerollsSpent.Rerolls.Max
-    ) {
-      throw new BadRequestException('No rerolls left');
-    }
-
-    if (
-      reelIndex < 0 ||
-      reelIndex >= SlotSession.CurrentSpinResult.Reels.length
-    ) {
-      throw new BadRequestException('Invalid reel index');
-    }
-
-    const UserBalanceBeforeReroll =
-      await this.authService.GetChipBalance(userId);
-    if (
-      SlotMachine.MinimumRerollValue &&
-      UserBalanceBeforeReroll.ChipBalance < SlotMachine.MinimumRerollValue
-    ) {
-      throw new BadRequestException('Insufficient chips to reroll');
-    }
-
-    if (SlotMachine.MinimumRerollValue) {
-      await this.authService.UpdateChipBalance(
-        userId,
-        -SlotMachine.MinimumRerollValue
-      );
-    }
-
-    const NewSymbol = this.getRandomSymbol();
-    SlotSession.CurrentSpinResult.Reels[reelIndex].SymbolId = NewSymbol;
-
-    const NewReward = this.calculateReward(SlotSession.CurrentSpinResult.Reels);
-    SlotSession.CurrentRewardSnapshot = NewReward;
-
-    SlotSession.CurrentRerollsSpent.Rerolls.Used += 1;
-    SlotSession.LastInteractionAt = new Date();
-
-    const UpdatedSession = await this.slotSessionRepo.save(SlotSession);
-    const UserBalanceAfterReroll =
-      await this.authService.GetChipBalance(userId);
-
-    return {
-      session: UpdatedSession,
-      currentBalance: UserBalanceAfterReroll.ChipBalance,
-    };
   }
 
   async cashOut(
@@ -267,15 +349,17 @@ export class SlotSessionService {
     await queryRunner.startTransaction();
 
     try {
-      const SessionRepository = queryRunner.manager.getRepository(SlotSession);
+      const manager = queryRunner.manager;
+      const SessionRepo = manager.getRepository(SlotSession);
 
-      const Session = await SessionRepository.findOne({
+      const Session = await SessionRepo.findOne({
         where: {
           SlotSessionId: id,
           SlotMachineId: slotMachineId,
           UserId: userId,
           DeletedAt: IsNull(),
         },
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!Session) {
@@ -288,19 +372,20 @@ export class SlotSessionService {
 
       const Reward = Session.CurrentRewardSnapshot;
 
-      await this.authService.UpdateChipBalance(userId, Reward);
+      await manager.increment(User, { UserId: userId }, 'ChipBalance', Reward);
 
       Session.Status = SlotSessionStatus.CashedOut;
       Session.EndedAt = new Date();
+      await SessionRepo.save(Session);
 
-      await SessionRepository.save(Session);
+      await this.sessionRegistryService.release(manager, userId);
 
       await queryRunner.commitTransaction();
 
-      const userBalance = await this.authService.GetChipBalance(userId);
+      const FinalBalance = await this.authService.GetChipBalance(userId);
       return {
         message: 'Cash out successful',
-        finalBalance: userBalance.ChipBalance,
+        finalBalance: FinalBalance.ChipBalance,
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -313,10 +398,7 @@ export class SlotSessionService {
   private generateRandomReels(): SpinReelResult[] {
     const Reels: SpinReelResult[] = [];
     for (let i = 0; i < 4; i++) {
-      Reels.push({
-        ReelIndex: i,
-        SymbolId: this.getRandomSymbol(),
-      });
+      Reels.push({ ReelIndex: i, SymbolId: this.getRandomSymbol() });
     }
     return Reels;
   }
@@ -341,7 +423,6 @@ export class SlotSessionService {
       if (RandomValue < Accumulator) return WeightedItem.Symbol;
     }
 
-    // Fallback
     return Weighted[Weighted.length - 1].Symbol;
   }
 

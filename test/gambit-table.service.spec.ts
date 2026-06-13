@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { GambitTableService } from '../src/modules/gambit/application/gambit-table.service';
+import { SessionRegistryService } from '../src/modules/sessions/application/session-registry.service';
 import { GambitTable } from '../src/modules/gambit/domain/gambit-table.entity';
 import {
   GambitSession,
@@ -70,6 +72,14 @@ describe('GambitTableService', () => {
         {
           provide: getRepositoryToken(GambitSession),
           useValue: MockSessionRepo as unknown as GambitSessionRepoMock,
+        },
+        {
+          provide: DataSource,
+          useValue: { createQueryRunner: jest.fn() } as unknown as DataSource,
+        },
+        {
+          provide: SessionRegistryService,
+          useValue: { acquire: jest.fn(), release: jest.fn() },
         },
       ],
     }).compile();

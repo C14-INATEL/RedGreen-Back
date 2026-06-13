@@ -5,15 +5,12 @@ import { GambitCurrentSessionController } from './presentation/gambit-current-se
 import { GambitSessionService } from './application/gambit-session.service';
 import { GambitSession } from './domain/gambit-session.entity';
 import { GambitTable } from '../domain/gambit-table.entity';
-import { User } from '../../auth/domain/user.entity';
-import { AuthModule } from '../../auth/auth.module';
-import { GambitModule } from '../gambit.module';
+import { SessionsModule } from '../../sessions/sessions.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([GambitSession, GambitTable, User]),
-    AuthModule,
-    GambitModule,
+    TypeOrmModule.forFeature([GambitSession, GambitTable]),
+    SessionsModule,
   ],
   providers: [GambitSessionService],
   controllers: [GambitSessionController, GambitCurrentSessionController],

@@ -9,6 +9,7 @@ import { SlotMachineModule } from './modules/slot-machine/slot-machine.module';
 import { SlotSessionModule } from './modules/slot-machine/sessions/slot-session.module';
 import { GambitModule } from './modules/gambit/gambit.module';
 import { GambitSessionModule } from './modules/gambit/sessions/gambit-session.module';
+import { SessionsModule } from './modules/sessions/sessions.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { GambitSessionModule } from './modules/gambit/sessions/gambit-session.mo
     SlotSessionModule,
     GambitModule,
     GambitSessionModule,
+    SessionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
