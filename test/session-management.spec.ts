@@ -21,7 +21,6 @@ import {
 import { SlotMachine } from '../src/modules/slot-machine/domain/slot-machine.entity';
 import { SessionRegistryService } from '../src/modules/sessions/application/session-registry.service';
 import { GameType } from '../src/modules/sessions/domain/enums/game-type.enum';
-import { ActiveSession } from '../src/modules/sessions/domain/active-session.entity';
 import { User } from '../src/modules/auth/domain/user.entity';
 import { AdminGuard } from '../src/core/guards/admin.guard';
 import { UserType } from '../src/modules/auth/domain/user.entity';
@@ -90,14 +89,13 @@ describe('Criterion 1 – user with active slot session cannot open a gambit', (
 
     managerMock.findOne.mockImplementation((entity: unknown) => {
       if (entity === GambitTable) return Promise.resolve(MockActiveGambitTable);
-      if (entity === ActiveSession)
-        return Promise.resolve({
-          ActiveSessionId: 'x',
-          GameType: GameType.Slot,
-          UserId: 'user-1',
-        } as ActiveSession); // user already has a slot session
+      if (entity === User)
+        return Promise.resolve({ UserId: 'user-1', ChipBalance: 1000 } as User);
       return Promise.resolve(null);
     });
+    managerMock.create.mockReturnValue({ GambitSessionId: 1 } as GambitSession);
+    managerMock.save.mockResolvedValue({ GambitSessionId: 1 } as GambitSession);
+    managerMock.insert.mockRejectedValue({ code: '23505' });
 
     const mockRepo = {
       find: jest.fn(),
@@ -111,6 +109,10 @@ describe('Criterion 1 – user with active slot session cannot open a gambit', (
       providers: [
         GambitSessionService,
         { provide: getRepositoryToken(GambitSession), useValue: mockRepo },
+        {
+          provide: getRepositoryToken(GambitTable),
+          useValue: { findOne: jest.fn() },
+        },
         {
           provide: DataSource,
           useValue: makeDataSourceMock(qrMock) as DataSource,
@@ -181,6 +183,10 @@ describe('Criterion 2 – concurrent session-start: 23505 becomes ConflictExcept
       providers: [
         GambitSessionService,
         { provide: getRepositoryToken(GambitSession), useValue: mockRepo },
+        {
+          provide: getRepositoryToken(GambitTable),
+          useValue: { findOne: jest.fn() },
+        },
         {
           provide: DataSource,
           useValue: makeDataSourceMock(qrMock) as DataSource,

@@ -56,22 +56,29 @@ export class GridCardDto {
     description: 'Effect card placed on this position, or null if none',
   })
   Effect: GambitCard | null;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'When true the card is locked (LOCK_GOOD_CARD) and cannot be burned',
+  })
+  Locked: boolean;
 }
 
 export class PendingEventDto {
   @ApiProperty({
-    example: 'Good',
-    enum: ['Good', 'Bad'],
-    description: 'Nature classification of the pending event',
+    type: 'array',
+    items: { type: 'string', enum: Object.values(GambitCard) },
+    description: 'Three good (or neutral) effect cards offered to the player',
   })
-  EventType: 'Good' | 'Bad';
+  GoodOptions: GambitCard[];
 
   @ApiProperty({
     type: 'array',
     items: { type: 'string', enum: Object.values(GambitCard) },
-    description: 'Three effect cards offered to the player',
+    description: 'Three bad (or neutral) effect cards offered to the player',
   })
-  CardsOffered: [GambitCard, GambitCard, GambitCard];
+  BadOptions: GambitCard[];
 }
 
 export class CurrentGridSnapshotDto {
@@ -102,4 +109,12 @@ export class CurrentGridSnapshotDto {
       'Active pending interaction requiring player input, or null if none',
   })
   PendingInteraction: PendingInteractionDto | null;
+
+  @ApiProperty({
+    type: 'array',
+    items: { type: 'number' },
+    description:
+      'Server-only: ManualFlipsCount values whose selection event already fired',
+  })
+  EventsFired: number[];
 }

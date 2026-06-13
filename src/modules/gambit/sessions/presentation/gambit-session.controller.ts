@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   Param,
   Patch,
   Post,
@@ -51,6 +50,7 @@ export class GambitSessionController {
   }
 
   @Get()
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'Get all gambit sessions for a gambit table' })
   @ApiOkResponse({ type: GambitSessionResponseDto, isArray: true })
   async FindAll(
@@ -111,29 +111,5 @@ export class GambitSessionController {
       CurrentUser.UserId
     );
     return { message: 'Gambit session removed successfully' };
-  }
-
-  @Post(':Id/cashout')
-  @HttpCode(200)
-  @ApiOperation({ summary: 'Cash out an active gambit session' })
-  @ApiOkResponse({
-    description: 'Session cashed out successfully',
-    schema: {
-      properties: {
-        message: { type: 'string' },
-        chipsAwarded: { type: 'number' },
-      },
-    },
-  })
-  async CashOut(
-    @Param('GambitTableId') GambitTableId: string,
-    @Param('Id') Id: string,
-    @CurrentUser() CurrentUser: { UserId: string }
-  ) {
-    return this.GambitSessionService.CashOut(
-      +GambitTableId,
-      +Id,
-      CurrentUser.UserId
-    );
   }
 }
