@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'node-22'
+    }
+
     options {
         timestamps()
         timeout(time: 5, unit: 'MINUTES')
@@ -48,6 +52,9 @@ pipeline {
     }
 
     post {
+        always {
+            cleanWs()
+        }
         success {
             script {
                 if (env.BRANCH_NAME == 'main') {
